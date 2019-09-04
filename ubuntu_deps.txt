@@ -1,0 +1,3 @@
+sudo apt-get install python3.7 python3.7-dev sox libsox-fmt-mp3 
+# These are for compiling dlib
+sudo apt-get install cmake libopenblas-dev liblapack-dev
