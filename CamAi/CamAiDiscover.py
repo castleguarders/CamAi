@@ -370,6 +370,7 @@ def configwizard(config_file):
         return
 
     import os
+    from getpass import getpass
     if os.path.isfile(config_file) is True:
         print("Configuration file: {} already exists ".format(config_file))
         print("Please specify a different file, or delete this file and rerun")
@@ -398,8 +399,8 @@ def configwizard(config_file):
                 if not camera['username']:
                     camera['username'] = input ("Please enter the username for camera {}: ".format(camera['hostname']))
                 if not camera['password']:
-                    camera['password'] = input ("Please enter the password for camera {}: ".format(camera['hostname']))
-
+                    #camera['password'] = input ("Please enter the password for camera {}: ".format(camera['hostname']))
+                    camera['password'] = getpass(prompt=f"Please enter the password for camera {camera['hostname']}: ")
                 #print (f"using username:{camera['username']}, password: {camera['password']}")
 
                 if not common_username or not common_password:
