@@ -9,16 +9,13 @@ import numpy as np
 import cv2 as cv
 import random
 import logging
-import imutils
+import platform
 
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
 from . import CamAiMessage
-#import CamAiMessage
-#import CamAiDetection
-#import CamAiUtils
 
 logger = logging.getLogger(__name__)
 #logger.setLevel(logging.DEBUG)
@@ -64,18 +61,16 @@ Video_File_Extension = '.mp4'
 
 def write_images_to_video(images, video_filename="./video.mp4", fps=24):
     if images is None or len(images) == 0:
-        logger.warning("No images passed, no video written")
+        logger.warning(f"No images passed, no video written")
         return
 
     (h, w) = images[0].shape[:2]
-    logger.warn(
-        "Image shape is height {}, width {}".format(h, w))
+    logger.warning(f"Image shape is height {h}, width {w}")
 
     video_log = cv.VideoWriter(
         video_filename, FOURCC, fps, (w, h), True)
     if video_log.isOpened() is not True:
-        logger.error("video file could not be opened file: {} w: {} h: {} ".format(
-            video_filename, w, h))
+        logger.error(f"video file {video_filename} could not be opened : w: {w} h: {h}")
 
     for image in images:
         video_log.write(image)
@@ -103,19 +98,19 @@ class CamAiCameraWriter(object):
                 target=self._write_video, args=([]), name=cname)
             self.writer.do_write= True
 
-        logger.warn("{} : Starting".format(cname))
+        logger.warning(f"{cname} : Starting")
         self.writer.start()
 
     def stop(self):
         cname = "Writer: " + self.config.name
         if self.config.multiprocessing_writer is False:
             self.writer.do_write = False
-        logger.warn("{} : Stopping".format(cname))
+        logger.warning(f"{cname} : Stopping")
 
     def join(self, waittime=10):
         cname = "Writer: " + self.config.name
         self.writer.join(waittime)
-        logger.warn("{} : Joining".format(cname))
+        logger.warning(f"{cname} : Joining")
 
     def get_video_log_filename(self, now):
         filename = (self.config.name + '_' + (str)(now.year) + '_' + (str)
@@ -134,12 +129,9 @@ class CamAiCameraWriter(object):
             dbtable = pq.read_table(parquet_file)
             vfdb = dbtable.to_pandas()
             if vfdb is None:
-                logger.error("{} : vfdb is None after loading {}".format(
-                    name, parquet_file))
+                logger.error(f"{name} : vfdb is None after loading {parquet_file}")
             else:
-                logger.debug(
-                    "{} : vfdb types: {}".format(
-                        name, vfdb.dtypes))
+                logger.debug(f"{name} : vfdb types: {vfdb.dtypes}")
         else:
             # First time, so create the db dataframe
             col_names = ['start_time',
@@ -159,7 +151,7 @@ class CamAiCameraWriter(object):
             vfdb = vfdb.set_index('start_time')
 
         self.vfdb = vfdb
-        logger.debug("{} : vfdb entries: {}".format(name, self.vfdb))
+        logger.debug(f"{name} : vfdb entries: {self.vfdb}")
 
     def update_video_database(self, start_time, vfile_name, end_time, event):
         if self.vfdb is None:
@@ -173,18 +165,17 @@ class CamAiCameraWriter(object):
             space_used = os.path.getsize(vfile_name)
             vfdb.loc[start_time] = [vfile_name, end_time, event, deleted, space_used]
         except FileNotFoundError:
-                logger.warning("{}: File missing, zero frames maybe?".format(name))
+                logger.warning(f"{name}: File missing, zero frames maybe?")
 
-        logger.debug("{} : ===============================================")
-        logger.debug("{} : start_time: {}, vfile_name : {}, end_time: {}, event: {}, deleted:{}".
-                    format(name, start_time, vfile_name, end_time, event, deleted))
-        logger.debug("{} : ===============================================")
-        logger.debug("{} : vfdb entries: {}".format(name, self.vfdb))
-        logger.debug("{} : ===============================================")
+        logger.debug(f"{name} : ===============================================")
+        logger.debug(f"{name} : start_time: {start_time}, vfile_name : {vfile_name}, end_time: {end_time}, event: {event}, deleted:{deleted}")
+        logger.debug(f"{name} : ===============================================")
+        logger.debug(f"{name} : vfdb entries: {self.vfdb}")
+        logger.debug(f"{name} : ===============================================")
 
         parquet_file = os.path.join(self.config.mydir, self.config.name + '_videodb.parquet')
         if os.path.isfile(parquet_file):
-            logger.debug ("{}:File exists, will overwrite".format(name))
+            logger.debug (f"{name}:File exists, will overwrite")
         vfdbtable = pa.Table.from_pandas(vfdb)
         pq.write_table(vfdbtable, parquet_file)
 
@@ -217,7 +208,7 @@ class CamAiCameraWriter(object):
 
         # TODO: Get threshold from configuration file
         if percentage_free <= self.config.deletethreshold:
-            #logger.warn("Starting vfdb is {}".format(vfdb))
+            #logger.warning(f"Starting vfdb is {vfdb}")
             vfdb_prune = vfdb[prune_from: prune_to]
             # Delete files with events if freespace lower than events threshold
             if percentage_free <= self.config.deleteeventsthreshold:
@@ -229,17 +220,16 @@ class CamAiCameraWriter(object):
                 try:
                     space_freed = os.path.getsize(file_tobe_deleted)
                     total_freed += space_freed
-                    logger.warn(f"{name}: Deleting file: {file_tobe_deleted}, freed: {int(space_freed/(1024*1024))} MB")
+                    logger.warning(f"{name}: Deleting file: {file_tobe_deleted}, freed: {int(space_freed/(1024*1024))} MB")
                     os.remove(file_tobe_deleted)
                 except FileNotFoundError:
-                    #logger.exception("{}: File {} not found, might have been manually deleted?".format(
                     logger.debug(f"{name}: File {file_tobe_deleted} not found, might have been manually deleted?")
 
-            logger.warn(f"{name}: Total Freed : {int(total_freed/(1024*1024))} MB")
+            logger.warning(f"{name}: Total Freed : {int(total_freed/(1024*1024))} MB")
 
             #vfdb_prune['deleted'].loc[vfdb_prune['deleted'] == False] = True
             vfdb.update(vfdb_prune)
-            #logger.warn("vfdb: index is {}".format(vfdb.loc[vfdb_prune.index]['deleted']))
+            #logger.warning(f"vfdb: index is {vfdb.loc[vfdb_prune.index]['deleted']}")
             logger.debug(f"{name} : vfdb entries after update: {vfdb}")
 
             if os.path.isfile(parquet_file):
@@ -247,7 +237,7 @@ class CamAiCameraWriter(object):
 
             vfdbtable = pa.Table.from_pandas(vfdb)
             pq.write_table(vfdbtable, parquet_file)
-            #logger.warn(f"Updated vfdb is {vfdb}")
+            #logger.warning(f"Updated vfdb is {vfdb}")
 
         self.vfdb = vfdb
 
@@ -288,43 +278,35 @@ class CamAiCameraWriter(object):
                     cum_gettime += (time.perf_counter() - starttime)
                     num_gets += 1
                     if message.msgtype == CamAiMessage.CamAiMsgType.image:
-                        # logger.warn("Got a single image")
+                        # logger.warning(f"Got a single image")
                         frame = message.msgdata
                         if np.any(frame):
                             starttime = time.perf_counter()
                             if (video_log is None):
                                 (h, w) = frame.shape[:2]
-                                logger.debug(
-                                    "{}: Image shape is height {}, width {}".format(
-                                        name, h, w))
+                                logger.debug(f"{name}: Image shape is height {h}, width {w}")
                                 video_log = cv.VideoWriter(
                                     video_log_filename, FOURCC, self.config.fps, (w, h), True)
                             # Profiling time spent on writing
                             (h, w) = frame.shape[:2]
                             rc = video_log.write(frame)
-                            # logger.debug("{}: Image shape is height {}, width {}, rc {}".format(name, h, w, rc))
+                            # logger.debug(f"{name}: Image shape is height {h}, width {w}, rc {rc}")
                             num_frames_written += 1
                             cum_writetime = (time.perf_counter() - starttime)
                         else:
-                            logger.warn(
-                                "{}: No frame in image message type!".format(name))
+                            logger.warning(f"{name}: No frame in image message type!")
                     elif message.msgtype == CamAiMessage.CamAiMsgType.imagelist:
                         events_in_file = True
-                        logger.debug(
-                            "{}: Got an imagelist of length {}".format(
-                                name, len(message.msgdata)))
+                        logger.debug(f"{name}: Got an imagelist of length {len(message.msgdata)}")
                         for frame in message.msgdata:
                             starttime = time.perf_counter()
                             if (video_log is None):
                                 (h, w) = frame.shape[:2]
-                                logger.debug(
-                                    "{}: Image shape is height {}, width {}".format(
-                                        name, h, w))
+                                logger.debug(f"{name}: Image shape is height {h}, width {w}")
                                 video_log = cv.VideoWriter(
                                     video_log_filename, FOURCC, self.config.fps, (w, h), True)
                                 if video_log.isOpened() is not True:
-                                    logger.error("{}: video log could not be opened file: {} w: {} h: {} ".format(
-                                        name, video_log_filename, w, h))
+                                    logger.error(f"{name}: video log could not be opened file: {video_log_filename} w: {w} h: {h} ")
                             # Profiling time spent on writing
                             video_log.write(frame)
                             num_frames_written += 1
@@ -336,18 +318,15 @@ class CamAiCameraWriter(object):
                         #del message.msgdata
                         #del message
                     elif message.msgtype == CamAiMessage.CamAiMsgType.quit:
-                        logger.warn(
-                            "{}: Quit message recieved: writer will stop".format(name))
+                        logger.warning(f"{name}: Quit message recieved: writer will stop")
                         break
                     else:
-                        logger.warn(
-                            "{}: Unknown message type received by writer".format(name))
+                        logger.warning(f"{name}: Unknown message type received by writer")
                         pass
                 except AttributeError:
-                    logger.exception(
-                        "{}: AttributeError, not expected, debug further".format(name))
+                    logger.exception(f"{name}: AttributeError, not expected, debug further")
                 except queue.Empty:
-                    logger.exception("{}: Queue is empty".format(name))
+                    logger.exception(f"{name}: Queue is empty")
                     break
 
                 # Check if it's a new hour, log to a new file if it is
@@ -358,9 +337,14 @@ class CamAiCameraWriter(object):
                         video_log.release()
                     os.sync()
 
-                    self.update_video_database(file_rotate_date,
-                                               video_log_filename,
-                                               now, events_in_file)
+                    # Get rid of this file from the buffer cache on linux
+                    if platform.system() == 'Linux':
+                        with open(video_log_filename, mode='r+b') as evict_fd:
+                            os.posix_fadvise(evict_fd.fileno(),0, 0, os.POSIX_FADV_DONTNEED)
+                            logger.warning(f"{name}: Evicted {video_log_filename} from linux buffer cache")
+
+                    self.update_video_database(file_rotate_date, video_log_filename, now, events_in_file)
+
 
                     # Free up space based on policy configured
                     if self.config.deletepolicyenabled is True:
@@ -368,11 +352,8 @@ class CamAiCameraWriter(object):
 
                     events_in_file = False
                     video_log_filename = self.get_video_log_filename(now)
-                    logger.debug(
-                        "{}: Rotating log file to {}, {}, {}".format(
-                            name, video_log_filename, file_rotate_date, now))
-                    logger.debug(
-                        "{}: Image height {}, width {}".format(name, h, w))
+                    logger.debug(f"{name}: Rotating log file to {video_log_filename}, {file_rotate_date}, {now}")
+                    logger.debug(f"{name}: Image height {h}, width {w}")
                     video_log = cv.VideoWriter(video_log_filename,
                                                FOURCC,
                                                self.config.fps,
@@ -380,14 +361,12 @@ class CamAiCameraWriter(object):
                                                True
                                                )
                     if video_log.isOpened() is not True:
-                        logger.error("{}: video log could not be opened file: {} w: {} h: {} ".format(
-                            name, video_log_filename, w, h))
+                        logger.error(f"{name}: video log could not be opened file: {video_log_filename} w: {w} h: {h} ")
                     file_rotate_date = now
 
             # This is only necessary when run as a process
             except KeyboardInterrupt:
-                logger.warn(
-                    "{}: Keyboard interrupt will wait for a Quit message for a clean exit".format(name))
+                logger.warning(f"{name}: Keyboard interrupt will wait for a Quit message for a clean exit")
                 pass
 
         # Update video file database
@@ -405,34 +384,28 @@ class CamAiCameraWriter(object):
             self.dump_stats(name, cum_gettime, cum_writetime, num_frames_written, num_gets)
 
         if (video_log is not None):
-            logger.warn("{}: Released video_log in writer".format(name))
+            logger.warning(f"{name}: Released video_log in writer")
             video_log.release()
 
         os.sync()
         # if (self.config.multiprocessing_writer is True):
         #    writer_queue.close()
-        logger.warn("{}: Returning from writer {}".format(name, writer.name))
+        logger.warning(f"{name}: Returning from writer {writer.name}")
         return
 
 
     def dump_stats(self, name, cum_gettime, cum_writetime, num_frames_written, num_gets):
         # Dump some profiling stats to understand our bottlenecks better
-        logger.warn(
-            "{}: ============================================================================".format(name))
-        logger.warn("{}: Number of gets processed: {}, ".format(name, num_gets))
-        logger.warn(
-            "{}: Number of frms processed: {}, ".format(
-                name, num_frames_written))
-        logger.warn("{}: Cumulative time on gets: {:.2f}".format(name, cum_gettime))
-        logger.warn("{}: Cumulative time on frms: {:.2f}".format(name, cum_writetime))
+        logger.warning(f"{name}: ============================================================================")
+        logger.warning(f"{name}: Number of gets processed: {num_gets}, ")
+        logger.warning(f"{name}: Number of frms processed: {num_frames_written}")
+        logger.warning(f"{name}: Cumulative time on gets: {cum_gettime:.2f}")
+        logger.warning(f"{name}: Cumulative time on frms: {cum_writetime:.2f}")
         if num_gets > 0:
-            logger.warn("{}: Average milliseconds per get: {:.2f}".format(
-                            name, 1000 * (cum_gettime / num_gets)))
+            logger.warning(f"{name}: Average milliseconds per get: {(1000 * (cum_gettime / num_gets)):.2f}")
         if num_frames_written > 0:
-            logger.warn("{}: Average milliseconds per frm: {:.2f}".format(
-                name, 1000 * (cum_writetime/num_frames_written)))
-        logger.warn(
-            "{}: ============================================================================".format(name))
+            logger.warning(f"{name}: Average milliseconds per frm: {(1000 * (cum_writetime/num_frames_written)):.2f}")
+        logger.warning(f"{name}: ============================================================================")
 
 
 
