@@ -34,7 +34,9 @@ Install Pip3 packages in requirements.txt
         virtualenv -p python3.7 venv37
 
     Unpack CamAi
-        tar xvfz - camai.tgz
+        tar xvfz - camai.tgz (from tar bundle)
+        pip3 install ./camai.whl (from a local wheel, pypi has size limits) 
+
 
     Install required python packages
         pip3 install -r ./CamAi/requirements.txt
@@ -42,13 +44,15 @@ Install Pip3 packages in requirements.txt
 Quick Run
     Discover onvif compatible cameras on your network and generate a configuration file
     
-    ./CamAi/camaicli.py --discover  
-    Or alternatively aicam.toml with cameras URLs and other settings specific to your environment
+    ./CamAi/camaicli.py discover 
+    or if installed from a wheel
+    python3.7 ~/venv37/lib/python3.7/site-packages/CamAi/camaicli.py discover 
 
     Start monitoring with 
-    ./CamAi/camaicli.py --monitor
+    ./CamAi/camaicli.py monitor 
+     or if installed from a wheel
+    python3.7 ~/venv37/lib/python3.7/site-packages/CamAi/camaicli.py monitor
 
     This should start logging videos to storage directories you specified in the config file.
     You cannot open the video being currently logged till it's rotated. 
-    Default rotation is 30 minutes , so you should be able to open it after next hours starts. Alert images and
-    snippet videos are generated in realtime and are located at the base directory for viewing.
+    Default rotation is 30 minutes at hourly boundaries, so you should be able to open it after next hours starts. Alert images and snippet videos are generated in realtime and are located at the base directory for viewing.

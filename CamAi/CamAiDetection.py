@@ -43,7 +43,7 @@ logger.addHandler(stream_handler)
 
 DEBUG = False
 
-Detector_Test_Image = "./testimg.jpg"
+Detector_Test_Image = "testimg.jpg"
 Q_Depth_Profiler_Interval = 300
 
 from enum import Enum
@@ -1047,7 +1047,8 @@ def object_detector_server(self, camera_names):
     # all libraries are preloaded before reader threads
     # Otherwise we are overrunning buffers at init with sometimes irreversible
     # decoding issues
-    testimage = load_test_image(Detector_Test_Image)
+    modeldir, testimagepath = get_model_path(Detector_Test_Image)
+    testimage = load_test_image(testimagepath)
     if np.any(testimage):
         molded_testimage, scale, padding = self.resize_image(testimage)
         height, width = molded_testimage.shape[:2]

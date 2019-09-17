@@ -506,12 +506,15 @@ def configwizard(config_file):
         print("To ensure encrypted delivery of alert images and videos, only TLS/SSL capable email servers are supported ")
         confirm = input("Do you want to setup email alerts? y/n: ")
         if confirm in yesList:
+            defaultsmtpport = 465
+            defaultsmtpserver = 'smtp.gmail.com'
             sender_email =  input("Please enter the email address of the sender:  ")
             print("In order to send email securely via TLS/SSL and through your email server, account information is needed")
             sender_login =  input("Please enter the username to login to the server to send email: e.g: username : ")
-            sender_secret=  input("Please enter the password for this account: ")
-            smtp_server =  input("Please enter the smtp server to send email through: e.g: smtp.gmail.com: ")
-            smtp_server_port =  input("Please enter the smtp server port : e.g: 465: ")
+            #sender_secret=  input("Please enter the password for this account: ")
+            sender_secret  = getpass(prompt=f"Please enter the password for this account: ")
+            smtp_server =  input("Please enter the smtp server to send email through: e.g: smtp.gmail.com: ") or defaultsmtpserver
+            smtp_server_port =  input("Please enter the smtp server port : e.g: 465: ") or defaultsmtpport
 
             commondict['email sender'] = {'sender_email': sender_email,
                               'sender_login': sender_login,

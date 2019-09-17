@@ -5,9 +5,27 @@ import argparse
 
 sys.path.append('./')
 
-def monitor(config_file) :
+usage='''camaicli <command> [<args>]
+
+ CamAi commands supported in this version are:
+    help - Print this message
+    monitor - Monitor cameras specified in the configuration file
+    discover - Run camera discovery wizard to create a camera configuration in the
+    ptzcontrol - Control camera with point to zoom (PTZ)
+'''
+
+#def monitor(config_file) :
+def monitor() :
+    myparser = argparse.ArgumentParser(description='Monitor Cameras')
+    #myparser.add_argument("--config", action="store", dest="config_file", required=True,
+    #                    help='''Configuration File''')
+    myparser.add_argument("--config", action="store", dest="config_file", default='aicam.toml',
+                        help='''Configuration File''')
+    args = myparser.parse_args(sys.argv[2:])
+    config_file = args.config_file
+
     if os.path.isfile(config_file) is False:
-        print(f"Configuration file {args.monitor_config_file} does not exist, exiting ")
+        print(f"Configuration file {config_file} does not exist, exiting ")
         return
 
     from CamAi import CamAiManager
@@ -31,8 +49,17 @@ def monitor(config_file) :
 
     print("Bye world")
 
-def discover(config_file):
+#def discover(config_file):
+def discover():
     from CamAi import CamAiDiscover
+
+    myparser = argparse.ArgumentParser(description='Discover Cameras')
+    #myparser.add_argument("--config", action="store", dest="config_file", required=True,
+    #                    help='''Configuration File''')
+    myparser.add_argument("--config", action="store", dest="config_file", default='aicam.toml',
+                        help='''Configuration File''')
+    args = myparser.parse_args(sys.argv[2:])
+    config_file = args.config_file
 
     if os.path.isfile(config_file) is True:
         print("Configuration file: {} already exists ".format(config_file))
@@ -63,53 +90,28 @@ def ptzcontrol():
     print(f"camera to ptz control is {camera}")
     CamAiPtz.ptzoperate(camera)
 
+def help():
+    print (usage)
+
 def run_cli():
-
+    Supported_Commands = ['monitor', 'discover', 'ptzcontrol', 'reset', 'help']
 # TODO: Command style of cli, decide between this or arg style below (test vs --test)
-#     parser = argparse.ArgumentParser(
-#             description='Command line utilities for CamAi package',
-#             usage='''camaicli <command> [<args>]
-#
-# The most commonly used git commands are:
-#    monitor Monitor cameras specified in the configuration file
-#    discover Run camera discovery wizard to create a camera configuration in the
-#    ptzcontrol Control camera with point to zoom (PTZ)
-# ''')
-#     parser.add_argument('command', help='Subcommand to run')
-#     # parse_args defaults to [1:] for args, but you need to
-#     # exclude the rest of the args too, or validation will fail
-#     args = parser.parse_args(sys.argv[1:2])
-#     try:
-#        eval(args.command)()
-#     except NameError:
-#         print (f'{args.command} is an Unrecognized command')
-#
-#     return
-#
-
-    #logger.debug('ARGV      :{}'.format(sys.argv[1:]))
-    parser = argparse.ArgumentParser(description='CamAi command line')
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--monitor", action="store", dest="monitor_config_file", nargs='?', const="aicam.toml",
-                        help='''Monitor cameras specified in the configuration file,
-                       looks for configuration in aicam.toml if no file is specified''')
-    group.add_argument("--discover", action="store", dest="discover_config_file", nargs='?', const="aicam.toml",
-                        help='''Run camera discovery wizard to create a camera configuration in the
-                       file specified, writes to aicam.toml if no file is specified''')
-    group.add_argument("--ptzcontrol", action="store", dest="ptzcontrol", nargs='?', const="aicam.toml",
-                        help='''Control camera with point to zoom (PTZ) ''')
+    parser = argparse.ArgumentParser(
+            description='Command line utilities for CamAi package',
+            usage=usage)
+    parser.add_argument('command', help='Subcommand to run')
+    # parse_args defaults to [1:] for args, but you need to
+    # exclude the rest of the args too, or validation will fail
     args = parser.parse_args(sys.argv[1:2])
+    if args.command in Supported_Commands:
+        try:
+           eval(args.command)()
+        except NameError:
+            print (f'{args.command} is not yet implemented')
+    else:
+        print (f"{args.command} is not a supported command")
 
-    #print(f"args are {args}")
-
-    if args.monitor_config_file:
-        monitor(args.monitor_config_file)
-
-    elif args.discover_config_file:
-        discover(args.discover_config_file)
-
-    elif args.ptzcontrol:
-        ptzcontrol()
+    return
 
 
 if __name__ == '__main__':
