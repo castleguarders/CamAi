@@ -29,8 +29,8 @@ Install Nvidia CUDA for tensorflow acceleration
 Install Pip3 packages in requirements.txt
     Optional but Recommended: Create a virtual env for camai
         mkdir camai
-        # If you do not have virtualenv already, or want to use a more current version         
-        pip3 install virtualenv --user 
+        # If you do not have virtualenv already, or want to use a more current version
+        pip3 install virtualenv --user
         virtualenv -p python3.7 venv37
 
     Unpack CamAi
@@ -44,15 +44,160 @@ Install Pip3 packages in requirements.txt
 Quick Run
     Discover onvif compatible cameras on your network and generate a configuration file
     
-    ./CamAi/camaicli.py discover 
+    ./CamAi/camaicli.py discover
     or if installed from a wheel
     python3.7 ~/venv37/lib/python3.7/site-packages/CamAi/camaicli.py discover 
 
     Start monitoring with 
     ./CamAi/camaicli.py monitor 
-     or if installed from a wheel
+    or if installed from a wheel
     python3.7 ~/venv37/lib/python3.7/site-packages/CamAi/camaicli.py monitor
 
     This should start logging videos to storage directories you specified in the config file.
-    You cannot open the video being currently logged till it's rotated. 
-    Default rotation is 30 minutes at hourly boundaries, so you should be able to open it after next hours starts. Alert images and snippet videos are generated in realtime and are located at the base directory for viewing.
+    You cannot open the video being currently logged till it's rotated. Default rotation is 30 minutes at hourly boundaries, so you should be able to open it after next hours starts. Alert images and snippet videos are generated in realtime and are located at the base directory for viewing.
+
+
+==============
+Configuration
+==============
+    Below is an example configuration file that the camcli.py --discover option generates. The configuration file can be hand crafted. There are three main sections.
+
+    **Cameras**
+    There has to be one or more camera sections. This section contains camera specific configuration and policy information. The camera section consists of a main section and a sub section. The sub section is used to specify one or more objects of interest for this camera and the object specific settings.
+
+    **Email Section**
+    This contains one Email Sender and zero or more Email Recepient sections
+
+    **Manager Section**
+    This section has CamAi runtime defaults. If the user doesn't specify a per camera directory, the manager sections basedir variable is used as the parent for each camera.::
+
+      [[camera]]
+      hostname = "192.168.2.10"   <--- Largely ceremonial (Not mandatory)
+      port = 8000                 <--- Onvif port  (Not mandatory)
+      username = "admin"          <--- Not used yet, earlier versions used this to construct the URL
+      password = "blahblah"       <--- Not used yet, earlier versions used this to construct the URL
+      name = "Garage Walkway"     <--- Make this human consumable as it shows up in alerts/logs etc (Required)
+      url = "rtsp://admin:blahblah@192.168.1.10:554/h264Preview_01_main" (Required)
+      fps = 22                    <--- Gets used, use a sane number (Recommended)
+      snapshoturl = "http://192.168.1.10:80/onvifsnapshot/snapshot_channel01.jpg" <--- (Not used yet)
+      readbuffer = 78643200       <--- 16 x resolution is generally recommended (Required)
+      resolution = "2560x1920"    <--- Not mandatory
+      enableptz = false           <--- Not used yet
+      subdir = "./videos/Garage Walkway"  <--- Recommended, manager sections basedir + name is used otherwise
+      mode = "detect_and_record_timelapse" <--- Required
+      rotation = 0                <--- Required if image is not oriented correctly
+      watchdogenable = true       <--- Only set to false if camera is actually just a video file 
+      watchdogtimer = 60          <--- Default is good
+      annotation = false          <--- Leave to false other than when image masking figuring out false detects, intensive overhead
+      showlivevideo = false       <--- Not used yet, older versions us
+      facedetection = false       <--- Hmm, this needs to deprecated as 'instancedetection' under objects of interest is the right
+      maxreadqueue = 32           <--- Tweak per your memory availability, memory consumed is this times resolution
+      detectionrate = 25          <--- Detection frequency, these many frames are skipped between detections
+      detecttrackseconds = 30     <--- Automatically track this many seconds if object of interest is detected
+      deletepolicyenabled = true  <--- Enable automatic storage management
+      deletethreshold = 60        <--- Start deleting when overall disk usage reaches this percentage
+      deleteeventsthreshold = 80  <--- Start deleting videos with events when overall disk usage reaches this percentage
+      deleteafterdays = 7         <--- Only delete after this many days
+      log_object_timeseries = true <--- Leave at true, used for instance detection and reducing redundant notifications
+      
+      [camera.objects_of_interest.person] <--- Sub section for an object of interest, in this case a 'person' object
+      detection_threshold = 0.98          <--- How confident the model should be that this object was detected
+      instance_match_threshold = 75       <--- How confident the model should be that this is the known person based on face recognition
+      instance_watch_timerange_start = 8  <--- Suppress alerts if the same object is seen within the last 8 minutes
+      instance_watch_timerange_end = 2    <--- Works with above, when to start looking if the object was last seen, default is 2 mins ago
+      instance_watch_continuous_mode = false
+      instancedetection = false           <--- Face recognition if it's a person object, (licenses for vehicles will also use this)
+      notify_startup_wait = 5             <--- How long to wait after startup before notifying, otherwise it will report existing objects
+      [camera.objects_of_interest.car]
+      detection_threshold = 0.85
+      instance_match_threshold = 65
+      instance_watch_timerange_start = 6
+      instance_watch_timerange_end = 2
+      instance_watch_continuous_mode = false
+      instancedetection = false
+      notify_startup_wait = 5
+      [camera.objects_of_interest.motorcycle]
+      detection_threshold = 0.98
+      instance_match_threshold = 75
+      instance_watch_timerange_start = 8
+      instance_watch_timerange_end = 2
+      instance_watch_continuous_mode = false
+      instancedetection = false
+      notify_startup_wait = 5
+      [camera.objects_of_interest.truck]
+      detection_threshold = 0.85
+      instance_match_threshold = 65
+      instance_watch_timerange_start = 6
+      instance_watch_timerange_end = 2
+      instance_watch_continuous_mode = false
+      instancedetection = false
+      notify_startup_wait = 5
+      [camera.objects_of_interest.bus]
+      detection_threshold = 0.98
+      instance_match_threshold = 75
+      instance_watch_timerange_start = 8
+      instance_watch_timerange_end = 2
+      instance_watch_continuous_mode = false
+      instancedetection = false
+      notify_startup_wait = 5
+      [camera.objects_of_interest.bicycle]
+      detection_threshold = 0.98
+      instance_match_threshold = 75
+      instance_watch_timerange_start = 8
+      instance_watch_timerange_end = 2
+      instance_watch_continuous_mode = false
+      instancedetection = false
+      notify_startup_wait = 5
+      
+      [["email recepient"]]  <--- Can have any number of recipients
+      name = "First Last"   <--- Recipient Name
+      email_address = "myemail@example.com"   <--- Recipient Email
+      
+      ["email sender"]
+      sender_email = "firstlast@example.com"   <--- Email address from which the alerts are sent
+      sender_login = "firstlast@example.com"   <--- Login to use to authenticate with the smtp server
+      smtp_server = "mail.example.com"         <--- Your email providers SMTP
+      smtp_server_port = 465                   <--- SSL SMTP Server Port
+      login_required = true                    <--- Only authenticated SMTP is supported 
+      use_SSL = true                           <--- Only SSL SMTP is supported 
+      sender_secret = "blahblahpassword"       <--- The password
+      
+      ["manager options"]
+      basedir = "./videos/"                    <--- Default storage location if not overriden on a per camera basis
+      numdetectors = 1                         <--- Number of detector processes, if more than 1, multiprocessing_detector has to be true
+      pipelineresize = true                    <--- Image resizing for detection, doing it per camera (vs in detector) reduces latency 
+      singledetectorqueue = true               <--- Use a single queue for all cameras vs one queue for all cameras, single is cheaper
+      defaultmaxqueue = 32                     <--- Default queue size, per camera override exists
+      multiprocessing_observer = false         <--- Leave these settings as is for now
+      multiprocessing_detector = false
+      multiprocessing_reader = false
+      multiprocessing_writer = false
+      multiprocessing_notifier = true
+      multiprocessing_viewer = false
+      multiprocessing_trainer = true
+
+    **Setting up Face Recognition**
+        Create a known faces directory. Follow the sample directory heirarchy.
+        Put this under camai directory for now. Pictures in standard 
+        formats like jpg/gif/png/bmp should work. Each picture should only have 
+        the face of the person whose name is the parent directory.::
+
+         known --->(Parent Directory)
+               people --->(People Directory)
+               │
+               ├── barack obama  ------> (Directory is named after the person)
+               │   └── barack.jpg 
+               │   └── vacation1.jpg 
+               │   └── dude3.jpg 
+               └── Da Wife
+               │   └── Wife1.png
+               │   └── Spouse2.png
+               │   └── IMG2019_3838383.JPEG 
+               │   └── BossLady.png
+               └── Da Hubby
+               │   └── dameek1.png
+               │   └── papertiger.png
+               └── Da Son
+                   └── slacker.jpg
+                   └── gamerboy.jpg
+                   └── prodigalreturns.jpg
