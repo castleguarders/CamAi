@@ -60,15 +60,15 @@ Quick Run
 ==============
 Configuration
 ==============
-    Below is an example configuration file that the camcli.py --discover option generates. The configuration file can be hand crafted. There are three main sections.
+Below is an example configuration file that the camcli.py --discover option generates. The configuration file can be hand crafted. There are three main sections.
 
-    **Cameras**
+**Cameras**
     There has to be one or more camera sections. This section contains camera specific configuration and policy information. The camera section consists of a main section and a sub section. The sub section is used to specify one or more objects of interest for this camera and the object specific settings.
 
-    **Email Section**
+**Email Section**
     This contains one Email Sender and zero or more Email Recepient sections
 
-    **Manager Section**
+**Manager Section**
     This section has CamAi runtime defaults. If the user doesn't specify a per camera directory, the manager sections basedir variable is used as the parent for each camera.::
 
       [[camera]]
@@ -176,7 +176,7 @@ Configuration
       multiprocessing_viewer = false
       multiprocessing_trainer = true
 
-    **Setting up Face Recognition**
+**Setting up Face Recognition**
         Create a known faces directory. Follow the sample directory heirarchy.
         Put this under camai directory for now. Pictures in standard 
         formats like jpg/gif/png/bmp should work. Each picture should only have 
