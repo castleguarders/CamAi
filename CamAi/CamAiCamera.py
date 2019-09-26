@@ -660,7 +660,7 @@ class CamAiCamera (object):
                             break
 
                 # Record Only Mode
-                elif (self.mode == CamAiConfig.CamAiCameraMode.record_only.name):
+                elif (self.mode == CamAiCameraMode.record_only.name):
                     # In this mode, reader sends the frames directly to writer
                     # So not much to do other than wait for quit signal
                     logger.debug(f"{name}: Checking for quit request in record_only mode")
