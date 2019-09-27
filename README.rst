@@ -242,7 +242,7 @@ Below is an example configuration file that the camcli.py --discover option gene
         *Stored*
                 Every alerts image and video clipping is stored by default in the 'basedir' specified in the manager section. These alert files are not automatically pruned or managed unlike the video recordings.
 
-.. image:: docs/Alerts_storage.png
+.. image:: docs/Alerts_Storage.png
 :width: 50
 :height: 150
 :alt: Storage Alert Image 
