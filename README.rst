@@ -235,9 +235,15 @@ Below is an example configuration file that the camcli.py --discover option gene
         *Verbal*
                 When a new object of interest is detected, it is announced locally on the computer thats running camai. 
 
+
         *Email*
                 When a new object of interest is detected, emails alerts are sent to the recipients specified in the configuration file. Each object of interest results in two emails, the first one with a single image and a follow up one with a short video clip. This is so that email size limits do not cause alerts to be missed.
 
         *Stored*
                 Every alerts image and video clipping is stored by default in the 'basedir' specified in the manager section. These alert files are not automatically pruned or managed unlike the video recordings.
+
+.. image:: docs/Alerts_storage.png
+:width: 50
+:height: 150
+:alt: Storage Alert Image 
                 

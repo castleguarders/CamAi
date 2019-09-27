@@ -276,7 +276,7 @@ class CamAiCameraReader(object):
         if DEBUG is True:
             self.dump_stats(name, num_frames_read, frame_process_time, max_latency, min_latency)
 
-        logger.warn("f{name}: Returning from reader {reader.name}")
+        logger.warn(f"{name}: Returning from reader {reader.name}")
         return
 
     def dump_stats(self, name, num_frames_read, frame_process_time, max_latency, min_latency):
