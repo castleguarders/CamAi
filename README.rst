@@ -252,6 +252,12 @@ Below is an example configuration file that the camcli.py --discover option gene
    :height: 150
    :alt: Email Alert with Video 
 
+.. image:: https://github.com/castleguarders/CamAi/blob/master/docs/White%20House%20Walkway_alarm_2019-09-26%2022:22:09.mp4
+   :width: 50
+   :height: 150
+   :alt: Email Alert Video 
+
+
         *Stored*
                 Every alerts image and video clipping is stored by default in the 'basedir' specified in the manager section. These alert files are not automatically pruned or managed unlike the video recordings.
 
