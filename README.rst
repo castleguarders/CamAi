@@ -242,7 +242,7 @@ Below is an example configuration file that the camcli.py --discover option gene
 
         *Email*
                 When a new object of interest is detected, emails alerts are sent to the recipients specified in the configuration file. Each object of interest results in two emails, the first one with a single image and a follow up one with a short video clip. This is so that email size limits do not cause alerts to be missed.
-.. image:: docs/White House Walkway_alarm_2019-09-26 22:22:09.mp4
+.. image:: docs/White%20House%20Walkway_alarm_2019-09-26%2022:22:09.mp4
    :width: 50
    :height: 150
    :alt: Email Alert Video 
