@@ -188,30 +188,40 @@ class CamAiCameraWriter(object):
 
         vfdb = self.vfdb
 
-        now = datetime.datetime.now()
-        prune_older_than_hours = datetime.timedelta(days=self.config.deleteafterdays,
-                                                    hours=now.hour, minutes=now.minute,
-                                                    seconds=now.second,
-                                                    microseconds=now.microsecond)
-        prune_from = now - datetime.timedelta(days=1*365,
-                                              hours=now.hour,
-                                              minutes=now.minute,
-                                              seconds=now.second,
-                                              microseconds=now.microsecond)
-        prune_to = now - prune_older_than_hours
-        logger.warning(f"{name}: Pruning from {prune_from} to {prune_to}")
-
         parquet_file = os.path.join(self.config.mydir, self.config.name + '_videodb.parquet')
+        if not os.path.isfile(parquet_file):
+            return
+
+        now = datetime.datetime.now()
+
         total, used, free = shutil.disk_usage(parquet_file)
         percentage_free = int((free*100)/total)
-        logger.debug(f"{name}: Disk free = {percentage_free}%, total: {int(total/(1024*1024))} MB, used: {int(used/(1024*1024))} MB, free: {int(free/(1024*1024))} MB")
+        logger.warning(f"{name}: Disk free = {percentage_free}%, total: {int(total/(1024*1024))} MB, used: {int(used/(1024*1024))} MB, free: {int(free/(1024*1024))} MB")
 
         # TODO: Get threshold from configuration file
-        if percentage_free <= self.config.deletethreshold:
+        passnum = 0
+        #if percentage_free <= self.config.deletethreshold:
+        while percentage_free <= self.config.deletethreshold:
+            #prune_older_than_hours = datetime.timedelta(days=self.config.deleteafterdays,
+            deleteafterdays = self.config.deleteafterdays - passnum
+            prune_older_than_hours = datetime.timedelta(days=deleteafterdays,
+                                                        hours=now.hour, minutes=now.minute,
+                                                        seconds=now.second,
+                                                        microseconds=now.microsecond)
+            prune_from = now - datetime.timedelta(days=1*365,
+                                                  hours=now.hour,
+                                                  minutes=now.minute,
+                                                  seconds=now.second,
+                                                  microseconds=now.microsecond)
+            prune_to = now - prune_older_than_hours
+            logger.warning(f"{name}: Pruning from {prune_from} to {prune_to}, pass:{passnum}")
+
+            passnum = passnum + 1
+
             #logger.warning(f"Starting vfdb is {vfdb}")
             vfdb_prune = vfdb[prune_from: prune_to]
-            # Delete files with events if freespace lower than events threshold
-            if percentage_free <= self.config.deleteeventsthreshold:
+            # Do not delete files with events if freespace greater than events threshold
+            if percentage_free > self.config.deleteeventsthreshold:
                 vfdb_prune = vfdb_prune[vfdb_prune['event'] == False].sort_index()
             files_to_prune = vfdb_prune[['vfile_name']]
 
@@ -232,14 +242,24 @@ class CamAiCameraWriter(object):
             #logger.warning(f"vfdb: index is {vfdb.loc[vfdb_prune.index]['deleted']}")
             logger.debug(f"{name} : vfdb entries after update: {vfdb}")
 
+            total, used, free = shutil.disk_usage(parquet_file)
+            percentage_free = int((free*100)/total)
+            logger.warning(f"{name}: After pass: {passnum}, Disk free = {percentage_free}%, total: {int(total/(1024*1024))} MB, used: {int(used/(1024*1024))} MB, free: {int(free/(1024*1024))} MB")
+
             if os.path.isfile(parquet_file):
-                logger.debug(f"{name}:File exists, will overwrite")
+                logger.warning(f"{name}:File exists, will overwrite")
 
             vfdbtable = pa.Table.from_pandas(vfdb)
             pq.write_table(vfdbtable, parquet_file)
             #logger.warning(f"Updated vfdb is {vfdb}")
 
-        self.vfdb = vfdb
+            self.vfdb = vfdb
+
+            # Don't spin if we cannot even clear up enough after going to 1
+            # day retention
+            if passnum >= self.config.deleteafterdays:
+                break
+
 
     # @profile
     def _write_video(self):
@@ -263,6 +283,12 @@ class CamAiCameraWriter(object):
         writer = threading.currentThread()
 
         do_write = True  # Process get keyboard exits, cannot be told directly by parent
+
+        # This will free up video logs that have expired if space is running
+        # low before we start
+        if self.config.deletepolicyenabled is True:
+            logger.debug(f"{name}: pruning at start")
+            self.prune_video_database()
 
         while do_write is True:
             if (self.config.multiprocessing_writer is False):
