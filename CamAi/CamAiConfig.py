@@ -87,6 +87,12 @@ MANAGERVARS = {'basedir': "./videos/",
                'multiprocessing_trainer': True
                }
 
+class CamAiAttachmentPreference(Enum):
+    image_only = 100
+    video_only = 200
+    image_and_video_together = 300
+    #image_and_video_separate = 400
+
 class CamAiConfig(object):
 
     def __init__(

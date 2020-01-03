@@ -64,12 +64,10 @@ def notifyVerbally(cameraname, alert_text, basedir="./"):
 
 
 # email_sender is dict and email_recepients is an array of dicts
-def notifyEmail(cameraname, email_sender, email_recepients, alert_text, file_attachment):
+def notifyEmail(cameraname, email_sender, email_recepients, alert_text, file_attachments):
     # import email
     import smtplib
     import ssl
-    from email import encoders
-    from email.mime.base import MIMEBase
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
 
@@ -102,38 +100,26 @@ def notifyEmail(cameraname, email_sender, email_recepients, alert_text, file_att
             next
 
         recepient_email = recepient['email_address']
+
+        # from .CamAiConfig import CamAiAttachmentPreference
+        # attachment_preference = recepient.get('attachment_preference', CamAiAttachmentPreference.image_and_video_together.name)
+        # logger.error(f"Notifier: attachment preference  is : {attachment_preference} ")
+
         # Create a multipart message and set headers
         emailmessage = MIMEMultipart()
         emailmessage["From"] = email_sender['sender_email']  # sender_email
         emailmessage["To"] = recepient_email
         emailmessage["Subject"] = subject
+        # emailmessage["Date"] =  " Use any date time module to insert or use email.utils formatdate"
         # emailmessage["Bcc"] = receiver_email  # Recommended for mass emails
 
         # Add body to email
         emailmessage.attach(MIMEText(body, "plain"))
 
-        # Add the alarm image to the email message
-        try:
-            with open(file_attachment, 'rb') as attachment:
-                # set attachment mime and file name, the image type is png
-                mime = MIMEBase('image', 'png', filename=file_attachment)
-                # add required header data:
-                mime.add_header(
-                    'Content-Disposition',
-                    'attachment',
-                    filename=file_attachment)
-                mime.add_header('X-Attachment-Id', '0')
-                mime.add_header('Content-ID', '<0>')
-                # read attachment file content into the MIMEBase object
-                mime.set_payload(attachment.read())
-                # encode with base64
-                encoders.encode_base64(mime)
-                # add MIMEBase object to MIMEMultipart object
-                emailmessage.attach(mime)
-        except FileNotFoundError:
-            logger.warning("Notifier: Missing attachment file")
+        # Add attachment to message
+        attach_files_to_email(emailmessage, file_attachments, recepient)
 
-        # Add attachment to message and convert message to string
+        # Convert message to string
         text = emailmessage.as_string()
         logger.debug("Notifier: Created email to send ")
 
@@ -156,14 +142,58 @@ def notifyEmail(cameraname, email_sender, email_recepients, alert_text, file_att
                     email_sender['sender_email'],
                     recepient_email, text)
             logger.debug(
-                "Notifier: Sent mail to {} with attachment {}".format(
-                    recepient_email, file_attachment))
+                "Notifier: Sent mail to {} with attachments {}".format(
+                    recepient_email, file_attachments))
         except TimeoutError:
             logger.warn(
                 "Notifier: Timeout while trying to send email via {}:{}".format(
                     email_sender['smtp_server'], email_sender['smtp_server_port']))
 
     return
+
+def attach_files_to_email(emailmessage, file_attachments, recepient):
+    from email.mime.base import MIMEBase
+    from email import encoders
+    from .CamAiConfig import CamAiAttachmentPreference
+
+    attachment_preference = recepient.get('attachment_preference', CamAiAttachmentPreference.image_and_video_together.name)
+    logger.error(f"Notifier: attachment preference  is : {attachment_preference} ")
+
+    for file_attachment in file_attachments:
+        # Get attachment type by getting extension without the dot
+        attachment_type = os.path.splitext(file_attachment)[1][1:]
+        logger.debug(f"Notifier: Attachment name {file_attachment} type is {attachment_type}")
+        try:
+            with open(file_attachment, 'rb') as attachment:
+                # set attachment mime and file name, the image type is png
+                if attachment_type == 'png':
+                    if attachment_preference ==  CamAiAttachmentPreference.video_only.name:
+                        continue
+                    logger.debug(f"Notifier: Attachment is an image")
+                    mime = MIMEBase('image', 'png', filename=file_attachment)
+                elif attachment_type == 'mp4':
+                    if attachment_preference ==  CamAiAttachmentPreference.image_only.name:
+                        continue
+                    logger.debug(f"Notifier: Attachment is a video")
+                    mime = MIMEBase('video', 'mp4', filename=file_attachment)
+                # add required header data:
+                mime.add_header(
+                    'Content-Disposition',
+                    'attachment',
+                    filename=file_attachment)
+                mime.add_header('X-Attachment-Id', file_attachment)
+                mime.add_header('Content-ID', '<' +  file_attachment + '>')
+
+                # read attachment file content into the MIMEBase object
+                mime.set_payload(attachment.read())
+                # encode with base64
+                encoders.encode_base64(mime)
+                # add MIMEBase object to MIMEMultipart object
+                emailmessage.attach(mime)
+        except FileNotFoundError:
+            logger.warning("Notifier: Missing attachment file")
+
+    return emailmessage
 
 
 def create_person_alert_text(cameraname, timestamp, num_people_detected, faces_found, unknownfacescount):
@@ -439,10 +469,8 @@ class CamAiNotification (object):
 
         # TODO: Make it user configurable to send just the email with image or just video or both
         # Email notification with image
-        notifyEmail(cameraname, self.email_sender, self.email_recepients, alert_text, alarm_image_file)
-
-        # Email notification with video
-        notifyEmail(cameraname, self.email_sender, self.email_recepients, alert_text, alarm_video_file)
+        file_attachments = [alarm_image_file, alarm_video_file]
+        notifyEmail(cameraname, self.email_sender, self.email_recepients, alert_text, file_attachments)
 
         if proc.poll() is None:
             logger.warning("Notifier: Verbal notification still running at return time ")
@@ -479,10 +507,8 @@ class CamAiNotification (object):
 
         # TODO: Make it user configurable to send just the email with image or just video or both
         # Email notification with image
-        notifyEmail(cameraname, self.email_sender, self.email_recepients, alert_text, alarm_image_file)
-
-        # Email notification with video
-        notifyEmail(cameraname, self.email_sender, self.email_recepients, alert_text, alarm_video_file)
+        file_attachments = [alarm_image_file, alarm_video_file]
+        notifyEmail(cameraname, self.email_sender, self.email_recepients, alert_text, file_attachments)
 
         if proc.poll() is None:
             logger.warning("Notifier: Verbal notification still running at return time ")
