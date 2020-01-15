@@ -101,7 +101,7 @@ def zeep_pythonvalue(self, xmlvalue):
 zeep.xsd.simple.AnySimpleType.pythonvalue = zeep_pythonvalue
 
 def get_camera_services(camera):
-    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'], '/usr/local/lib/python3.6/site-packages/wsdl')
+    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'])
 
     # Get List of Services
     devicemgmt_service = mycam.create_devicemgmt_service()
@@ -113,7 +113,7 @@ def get_camera_services(camera):
         logging.warn ("Service: {} : ".format(service))
 
 def get_device_service_capabilities(camera):
-    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'], '/usr/local/lib/python3.6/site-packages/wsdl')
+    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'])
 
     # Get List of Services
     devicemgmt_service = mycam.create_devicemgmt_service()
@@ -124,7 +124,7 @@ def get_device_service_capabilities(camera):
         logging.warning ("Service capability: {} : ".format(servicecap))
 
 def get_camera_capabilities(camera):
-    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'], '/usr/local/lib/python3.6/site-packages/wsdl')
+    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'])
 
     # Get List of Capabilities
     capabilities = mycam.devicemgmt.GetCapabilities()
@@ -133,7 +133,7 @@ def get_camera_capabilities(camera):
         logging.debug ("Capability: {} : ".format(capability))
 
 def get_access_policy(camera):
-    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'], '/usr/local/lib/python3.6/site-packages/wsdl')
+    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'] )
 
     # Get List of Services
     devicemgmt_service = mycam.create_devicemgmt_service()
@@ -142,7 +142,7 @@ def get_access_policy(camera):
 
 
 def get_camera_time(camera):
-    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'], '/usr/local/lib/python3.6/site-packages/wsdl')
+    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'] )
 
     # Get Hostname
     #resp = mycam.devicemgmt.GetHostname()
@@ -151,11 +151,10 @@ def get_camera_time(camera):
     tz = dt.TimeZone
     year = dt.UTCDateTime.Date.Year
     hour = dt.UTCDateTime.Time.Hour
-
     logging.warning ('My camera`s time: {}'.format(dt))
 
 def set_camera_time(camera):
-    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'], '/usr/local/lib/python3.6/site-packages/wsdl')
+    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'] )
 
     settime =  mycam.devicemgmt.create_type('SetSystemDateAndTime')
     settime.DateTimeType = 'Manual'
@@ -194,7 +193,7 @@ def set_camera_time(camera):
 
 def get_camera_name(camera):
     #print (f"Using camera {camera}")
-    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'], '/usr/local/lib/python3.6/site-packages/wsdl')
+    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'] )
 
     # Get Hostname
     resp = mycam.devicemgmt.GetHostname()
@@ -211,7 +210,7 @@ def get_media_profile_configuration(camera):
     '''
 
     # Create the media service
-    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'], '/usr/local/lib/python3.6/site-packages/wsdl')
+    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'] )
     resp = mycam.devicemgmt.GetHostname()
     logging.debug ('My camera`s hostname: {}'.format(str(resp.Name)))
 
@@ -255,7 +254,7 @@ def get_media_profile_configuration(camera):
 
 
 def is_ptz_supported(camera):
-    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'], '/usr/local/lib/python3.6/site-packages/wsdl')
+    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'] )
     try:
         ptz = mycam.create_ptz_service()
         return True
@@ -266,7 +265,7 @@ def is_ptz_supported(camera):
 
 def get_stream_configuration(camera):
     # Create the media service
-    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'], '/usr/local/lib/python3.6/site-packages/wsdl')
+    mycam = ONVIFCamera(camera['hostname'] , camera['port'], camera['username'], camera['password'] )
     #resp = mycam.devicemgmt.GetHostname()
     #logging.debug ('My camera`s hostname: {}'.format(str(resp.Name)))
 
