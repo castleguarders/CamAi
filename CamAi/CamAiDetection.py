@@ -20,8 +20,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 #sys.path.append('./mrcnn')
 #sys.path.append('./coco')
 #import coco
-import mrcnn_model as modellib
-import mrcnn_config as mrconfig
+# import mrcnn_model as modellib
+# import mrcnn_config as mrconfig
 import imutils
 
 logger = logging.getLogger(__name__)
@@ -947,6 +947,8 @@ class CamAiDetection (object):
         self.singledetectorqueue = singledetectorqueue
 
     def get_detection_config(self):
+        import mrcnn_config as mrconfig
+
         # TODO: Assuming maskrcnn is the hard coded detection engine, this
         # should be config based
         if self.pipeline_image_resize is True:
@@ -968,6 +970,8 @@ class CamAiDetection (object):
 
 
     def get_detection_model(self):
+        import mrcnn_model as modellib
+
         # modulepath = os.path.abspath(__file__)
         # ROOT_DIR = os.path.dirname(modulepath)
         # MODEL_DIR = os.path.join(ROOT_DIR, "modeldata")

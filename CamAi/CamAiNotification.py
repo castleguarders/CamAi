@@ -9,11 +9,9 @@ import datetime
 import time
 import cv2 as cv
 
-from . import CamAiMessage, CamAiDetection, CamAiDetectionFaces, CamAiCameraWriter
-#import CamAiMessage
-#import CamAiDetection
-#import CamAiDetectionFaces
-#import CamAiCameraWriter
+#from . import CamAiMessage, CamAiDetection, CamAiDetectionFaces, CamAiCameraWriter
+from . import CamAiMessage, CamAiDetectionFaces, CamAiCameraWriter
+from .CamAiDetection import get_class_index, get_class_name, Person_Index, Car_Index, Bicycle_Index, Motorcycle_Index, Truck_Index, Bus_Index, Vehicle_Indexes
 
 logger = logging.getLogger(__name__)
 #logger.setLevel(logging.WARN)
@@ -157,7 +155,7 @@ def attach_files_to_email(emailmessage, file_attachments, recepient):
     from .CamAiConfig import CamAiAttachmentPreference
 
     attachment_preference = recepient.get('attachment_preference', CamAiAttachmentPreference.image_and_video_together.name)
-    logger.error(f"Notifier: attachment preference  is : {attachment_preference} ")
+    logger.debug(f"Notifier: attachment preference  is : {attachment_preference} ")
 
     for file_attachment in file_attachments:
         # Get attachment type by getting extension without the dot
@@ -279,7 +277,9 @@ class CamAiNotification (object):
         self.config = config
         self.notification_queues = notification_queues
         self.start_time = time.time()
+        #self.detectionfaces = CamAiDetectionFaces.CamAiDetectionFaces()
         logger.debug("Notifier: Monitoring {} queues".format(len(notification_queues)))
+
 
     @property
     def email_sender(self):
@@ -391,12 +391,14 @@ class CamAiNotification (object):
         matchesarray = message.msgdata['objects detected']
 
         # Detected a person
-        if are_these_objects_in_matches(matchesarray, [CamAiDetection.Person_Index]):
+        #if are_these_objects_in_matches(matchesarray, [CamAiDetection.Person_Index]):
+        if are_these_objects_in_matches(matchesarray, [Person_Index]):
             logger.debug("Notifier: Detected new people")
             self.handle_person_notification(message, self.detectionfaces)
 
          # Detected some new vehicle coming in
-        if are_these_objects_in_matches(matchesarray, CamAiDetection.Vehicle_Indexes):
+        #if are_these_objects_in_matches(matchesarray, CamAiDetection.Vehicle_Indexes):
+        if are_these_objects_in_matches(matchesarray, Vehicle_Indexes):
             logger.warning("Notifier: Detected new vehicles")
             self.handle_vehicle_notification(message)
             pass
@@ -422,8 +424,10 @@ class CamAiNotification (object):
         # should be zero, and thus cropped_images, and the
         # rest of the code a NOOP
 
-        cropped_images = get_cropped_objects(images, matchesarray, CamAiDetection.Person_Index)
-        num_people_detected = get_object_count(matchesarray, CamAiDetection.Person_Index)
+        #cropped_images = get_cropped_objects(images, matchesarray, CamAiDetection.Person_Index)
+        cropped_images = get_cropped_objects(images, matchesarray, Person_Index)
+        #num_people_detected = get_object_count(matchesarray, CamAiDetection.Person_Index)
+        num_people_detected = get_object_count(matchesarray, Person_Index)
         logger.debug("Notifier: len of cropped_images is {}, num people: {}".format(len(cropped_images), num_people_detected))
 
         bestimage = images[0]
@@ -487,8 +491,10 @@ class CamAiNotification (object):
 
         # This is really only to draw rectangles around detected cars to debug
         # false detects
-        cropped_images = get_cropped_objects(images, matchesarray, CamAiDetection.Car_Index)
-        num_vehicles_detected = get_object_count(matchesarray, CamAiDetection.Car_Index)
+        #cropped_images = get_cropped_objects(images, matchesarray, CamAiDetection.Car_Index)
+        cropped_images = get_cropped_objects(images, matchesarray, Car_Index)
+        #num_vehicles_detected = get_object_count(matchesarray, CamAiDetection.Car_Index)
+        num_vehicles_detected = get_object_count(matchesarray, Car_Index)
 
         alarm_image_file = os.path.join(self.basedir, message.msgdata['cameraname'] + "_alarm_" + str(message.msgdata['timestamp']) + ".png")
 
@@ -546,7 +552,8 @@ def are_these_objects_in_matches(matchesarray, object_indexes):
 #def get_object_count(matchesarray, object_index=CamAiDetection.Person_Index):
 def get_object_count(matchesarray, object_index):
     max_detected_count = 0
-    object_class_name = CamAiDetection.get_class_name(object_index)
+    #object_class_name = CamAiDetection.get_class_name(object_index)
+    object_class_name = get_class_name(object_index)
 
     for matches_dict in matchesarray:
         if (len(matches_dict) == 0) or (object_index not in matches_dict):

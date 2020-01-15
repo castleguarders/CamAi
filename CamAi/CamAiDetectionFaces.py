@@ -7,7 +7,7 @@ import dlib
 from math import sqrt
 
 #import CamAiMessage
-from . import CamAiMessage
+#from . import CamAiMessage
 
 logger = logging.getLogger(__name__)
 #logger.setLevel(logging.WARN)
