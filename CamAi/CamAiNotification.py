@@ -9,7 +9,6 @@ import datetime
 import time
 import cv2 as cv
 
-#from . import CamAiMessage, CamAiDetection, CamAiDetectionFaces, CamAiCameraWriter
 from . import CamAiMessage, CamAiDetectionFaces, CamAiCameraWriter
 from .CamAiDetection import get_class_index, get_class_name, Person_Index, Car_Index, Bicycle_Index, Motorcycle_Index, Truck_Index, Bus_Index, Vehicle_Indexes
 
@@ -99,10 +98,6 @@ def notifyEmail(cameraname, email_sender, email_recepients, alert_text, file_att
 
         recepient_email = recepient['email_address']
 
-        # from .CamAiConfig import CamAiAttachmentPreference
-        # attachment_preference = recepient.get('attachment_preference', CamAiAttachmentPreference.image_and_video_together.name)
-        # logger.error(f"Notifier: attachment preference  is : {attachment_preference} ")
-
         # Create a multipart message and set headers
         emailmessage = MIMEMultipart()
         emailmessage["From"] = email_sender['sender_email']  # sender_email
@@ -154,8 +149,11 @@ def attach_files_to_email(emailmessage, file_attachments, recepient):
     from email import encoders
     from .CamAiConfig import CamAiAttachmentPreference
 
-    attachment_preference = recepient.get('attachment_preference', CamAiAttachmentPreference.image_and_video_together.name)
+    attachment_preference = recepient.get('attachment_preference', CamAiAttachmentPreference.image_and_video.name)
     logger.debug(f"Notifier: attachment preference  is : {attachment_preference} ")
+
+    if attachment_preference ==  CamAiAttachmentPreference.no_attachments.name:
+        return emailmessage
 
     for file_attachment in file_attachments:
         # Get attachment type by getting extension without the dot
@@ -549,7 +547,6 @@ def are_these_objects_in_matches(matchesarray, object_indexes):
     return False
 
 
-#def get_object_count(matchesarray, object_index=CamAiDetection.Person_Index):
 def get_object_count(matchesarray, object_index):
     max_detected_count = 0
     #object_class_name = CamAiDetection.get_class_name(object_index)

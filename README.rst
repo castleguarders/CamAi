@@ -161,7 +161,7 @@ Below is an example configuration file that the camcli.py --discover option gene
       [["email recepient"]]  <--- Can have any number of recipients
       name = "First Last"   <--- Recipient Name
       email_address = "myemail@example.com"   <--- Recipient Email
-      
+      attachment_preference = 'image_only'    <--- One of image_and_video(default), image_only, video_only or  no_attachments  
       ["email sender"]
       sender_email = "firstlast@example.com"   <--- Email address from which the alerts are sent
       sender_login = "firstlast@example.com"   <--- Login to use to authenticate with the smtp server
