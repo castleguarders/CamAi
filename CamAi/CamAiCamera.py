@@ -717,6 +717,8 @@ class CamAiCamera (object):
         if self.multiprocessing_detector is True:
             camera_detect_queue.close()
             camera_response_queue.close()
+
+        if self.multiprocessing_observer is True:
             camera_oob_queue.close()
 
         if self.multiprocessing_reader is True:
