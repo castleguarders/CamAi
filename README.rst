@@ -7,6 +7,16 @@ CamAi tries to take advantange of the 'many cpu cores' and is heavily threaded t
 
 It is certainly possible to try to 'graft' these features to existing systems. However it would have resulted in a mish mash of languages and technologies (perl/c++/windows only) or only partially open source. CamAI aims to have a more modern, maintainable and extensible code base that is fully be open source, and cross platform (over time) and modern, without having to jettison control and visibility to 'cloud' cameras.
 
+.. image:: docs/Email_Alert_with_Image.png
+   :width: 50
+   :height: 150
+   :alt: Email Alert with Image
+
+.. image:: docs/Email_Alert_with_Video.png
+   :width: 50
+   :height: 150
+   :alt: Email Alert with Video 
+
 
 ============
 Installation
@@ -21,10 +31,9 @@ Install Ubuntu Packages in ubuntu_deps.txt.
     bash ./ubuntu-deps.txt
 
 Install Nvidia CUDA for tensorflow acceleration
-    Cuda 10.0(not 10.1), CuDNN 7.5 and Tensorflow 1.13/1.14 was used for testing
-    Any compatible combination after these versions should work.
+    Any recent compatible combination of Cuda, CuDNN and Tensorflow should work 
 
-    It's possible to run tensorflow without CUDA, but it will most likely be impractically slow. If you use CamAi in record only mode, a GPU will not be essential.
+    You can also run this without an NVIDIA GPU on a many core system, especially if the camera resolutions are 1080p or lesser.
 
 Install Pip3 packages in requirements.txt
     Optional but Recommended: Create a virtual env for camai
@@ -46,17 +55,17 @@ Quick Run
     
     ./CamAi/camaicli.py discover
     or if installed from a wheel
-    python3.7 ~/venv37/lib/python3.7/site-packages/CamAi/camaicli.py discover 
+    python3.7 ~/venv37/lib/python3.7/site-packages/CamAi/camaicli.py discover --config ./aicam.toml 
 
     Start monitoring with 
-    ./CamAi/camaicli.py monitor 
+    ./CamAi/camaicli.py monitor  --config ./aicam.toml
     or if installed from a wheel
     python3.7 ~/venv37/lib/python3.7/site-packages/CamAi/camaicli.py monitor
 
     If you want to specify a configuration file in a different location you can add --config config.toml to the above
     python3.7 ~/venv37/lib/python3.7/site-packages/CamAi/camaicli.py monitor
 
-    This should start logging videos to storage directories you specified in the config file.
+    This should start logging videos to storage directories you specified in the config file. The default location is ./video
     You cannot open the video being currently logged till it's rotated. Default rotation is 30 minutes at hourly boundaries, so you should be able to open it after next hours starts. Alert images and snippet videos are generated in realtime and are located at the base directory for viewing.
 
 
@@ -112,6 +121,10 @@ Below is an example configuration file that the camcli.py --discover option gene
                                                    alerts will be triggered 
       instancedetection = false           <--- Face recognition if it's a person object, (licenses for vehicles will also use this)
       notify_startup_wait = 5             <--- How long to wait after startup before notifying, otherwise it will report existing objects
+      [camera.notifications]
+      local_audio_notification = true     <-- Enable/Disable local audio alerts for this camera
+      email_notification = true           <-- Enable/Disable email alerts for this camera
+      retain_clips = true                 <-- Retain or Delete the alert video clips / images after notification
 
       [camera.objects_of_interest.car]
       detection_threshold = 0.85
@@ -182,7 +195,7 @@ Below is an example configuration file that the camcli.py --discover option gene
       multiprocessing_detector = false
       multiprocessing_reader = false
       multiprocessing_writer = false
-      multiprocessing_notifier = true
+      multiprocessing_notifier = true          <--- Has to be true if face recognition is desired
       multiprocessing_viewer = false
       multiprocessing_trainer = true
 
@@ -256,7 +269,7 @@ Below is an example configuration file that the camcli.py --discover option gene
 
 
         *Stored*
-                Every alerts image and video clipping is stored by default in the 'basedir' specified in the manager section. These alert files are not automatically pruned or managed unlike the video recordings.
+                Every alerts image and video clipping is stored by default in the 'basedir' specified in the manager section. By default these alert files are not deleted or managed unlike the video recordings. You can choose to delete them on a per camera basis.
 
 .. image:: docs/Alerts_Storage.png
    :width: 50
