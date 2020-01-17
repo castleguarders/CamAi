@@ -67,10 +67,14 @@ class CamAiCamera (object):
                 logger.debug(f"Adding camera attribute: {key}, with value: {camvars[key]}")
                 setattr(self, key, camvars[key])
 
+        self.camvars = camvars.copy()
+
         if managervars and len(managervars) > 0 :
             for key in managervars:
                 logger.debug(f"Adding manager attribute: {key}, with value: {managervars[key]}")
                 setattr(self, key, managervars[key])
+
+        self.managervars = managervars.copy()
 
         if queues is not None:
             self.reader_queue = queues['reader_queue']
@@ -97,7 +101,6 @@ class CamAiCamera (object):
                   managerconfig, camera_queues, detection):
         from .CamAiConfig import CAMVARS, MANAGERVARS
         camvars = CAMVARS
-        #camvars = CamAiConfig.CAMVARS
 
         # Update mandatory configuration variables:defaults with user provided values if any
         for key in camvars:
@@ -115,7 +118,6 @@ class CamAiCamera (object):
                 logger.warning(f"{camvars['name']}: key: {key} doesn't exist in defaults , going with user provided value{cameraconfig[key]}")
 
         managervars = MANAGERVARS
-        #managervars = CamAiConfig.MANAGERVARS
         for key in managervars:
             try:
                 managervars[key] = managerconfig[key]
@@ -415,7 +417,6 @@ class CamAiCamera (object):
 
         from .CamAiCameraReader import CamAiCameraReader
         reader = CamAiCameraReader(self)
-        #reader = CamAiCameraReader.CamAiCameraReader(self)
         reader.start()
 
         if DEBUG is True:
@@ -649,7 +650,8 @@ class CamAiCamera (object):
 
                                 try:
                                     message = CamAiMessage.CamAiNotifyMsg(
-                                        sampled_images, matchesarray, detect_time, self.name)
+                                        sampled_images, matchesarray, detect_time, self.camvars
+                                    )
                                     camera_notification_queue.put(message)
                                     notified_once = True
                                 except queue.Full:

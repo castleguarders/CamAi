@@ -49,6 +49,15 @@ Default_Objects_to_Watch = {'person': Default_Objects_Vars,
                             'bus':   Default_Objects_Vars,
                             'bicycle':   Default_Objects_Vars
                             }
+Default_Local_Audio_Notification = True
+Default_Email_Audio_Notification = True
+Default_Retain_Clips = True
+
+Default_Notifications = {'local_audio_notification':  Default_Local_Audio_Notification,
+                         'email_notification':  Default_Email_Audio_Notification,
+                         'retain_clips': Default_Retain_Clips
+                         }
+
 
 CAMVARS = {'name': 'Camera Name',
            'url': '0',
@@ -70,6 +79,7 @@ CAMVARS = {'name': 'Camera Name',
            'deleteeventsthreshold':80,
            'deleteafterdays':7,
            'log_object_timeseries':True,
+           'notifications': Default_Notifications,
            'objects_of_interest': Default_Objects_to_Watch
            }
 

@@ -38,7 +38,7 @@ def notifyVerbally(cameraname, alert_text, basedir="./"):
     from gtts import gTTS
     from io import BytesIO
 
-    logger.warn(
+    logger.warning(
         "Notifier: Issuing warning on camera {}".format(cameraname))
 
     # Language in which you want to convert
@@ -72,27 +72,27 @@ def notifyEmail(cameraname, email_sender, email_recepients, alert_text, file_att
     body = alert_text
 
     if ('smtp_server' not in email_sender):
-        logger.warn(
+        logger.warning(
             "Notifier: No SMTP Server configured, cannot send email notifications")
         return
     if 'smtp_server_port' not in email_sender:
-        logger.warn(
+        logger.warning(
             "Notifier: No SMTP Server port configured, cannot send email notifications")
         return
     if ('login_required' in email_sender) and (
             email_sender['login_required'] is True):
         if 'sender_login' not in email_sender:
-            logger.warn(
+            logger.warning(
                 "Notifier: No sender login configured, cannot send email notifications")
             return
         if 'sender_secret' not in email_sender:
-            logger.warn(
+            logger.warning(
                 "Notifier: No sender password configured, cannot send email notifications")
             return
 
     for recepient in email_recepients:
         if ('email_address' not in recepient):
-            logger.warn(
+            logger.warning(
                 "Notifier: No sender email address configured, will not send email notifications to this recepient")
             next
 
@@ -138,7 +138,7 @@ def notifyEmail(cameraname, email_sender, email_recepients, alert_text, file_att
                 "Notifier: Sent mail to {} with attachments {}".format(
                     recepient_email, file_attachments))
         except TimeoutError:
-            logger.warn(
+            logger.warning(
                 "Notifier: Timeout while trying to send email via {}:{}".format(
                     email_sender['smtp_server'], email_sender['smtp_server_port']))
 
@@ -236,7 +236,7 @@ def create_person_alert_text(cameraname, timestamp, num_people_detected, faces_f
         elif num_people_detected > 1:
             people_string = "{} people were seen on camera {}".format(num_people_detected, cameraname)
         else:
-            logger.warn("No people detected, yet alerting?")
+            logger.warning("No people detected, yet alerting?")
             pass
 
     alertstring = ''
@@ -254,7 +254,7 @@ def create_vehicle_alert_text(cameraname, timestamp, num_vehicles_detected):
     elif num_vehicles_detected > 1:
         vehicle_string = "{} cars were seen on camera {}".format(num_vehicles_detected, cameraname)
     else:
-        logger.warn("No cars detected, yet alerting?")
+        logger.warning("No cars detected, yet alerting?")
         pass
 
     alertstring = ''
@@ -320,17 +320,16 @@ class CamAiNotification (object):
     def stop(self):
         # setting this flag only works when running as a thread
         self.notifier.do_notify = False
-        logger.warn("Notifier: Stopping")
+        logger.warning("Notifier: Stopping")
 
     def join(self, waittime=10):
         self.notifier.join(waittime)
-        logger.warn("Notifier: Join")
+        logger.warning("Notifier: Join")
 
     def _process_notifications(self):
         notification_wait = 2
         logger.debug("Notifier: processing {} queues".format(len(self.notification_queues)))
 
-        #self.detectionfaces = CamAiDetectionFaces.CamAiDetectionFaces()
         self.detectionfaces = None
 
         # notifier = threading.currentThread()
@@ -348,33 +347,43 @@ class CamAiNotification (object):
 
                 for notifier_queue in self.notification_queues:
                     try:
-                        #logger.warning("Notifier: queue get ")
                         message = notifier_queue.get(True, notification_wait)
-                        logger.warning("Notifier: queue get after ")
+                        logger.warning("\n\nNotifier: Received a notification message\n\n")
 
                         if message.msgtype == CamAiMessage.CamAiMsgType.notification:
                             self.handle_notification(message)
                         elif message.msgtype == CamAiMessage.CamAiMsgType.quit:
-                            logger.warn("Notifier: Got a quit message, stopping notifier")
+                            logger.warning("Notifier: Got a quit message, stopping notifier")
                             do_notify = False
                             break
                         else:
-                            logger.warn("Notifier: Unknown message type receieved!")
+                            logger.warning("Notifier: Unknown message type receieved!")
                             pass
                     except queue.Empty:
                         pass
                     except AttributeError as ae:
-                        logger.warn("Notifier: AttributeError in notifier loop: \n{} ".format(ae))
+                        logger.warning("Notifier: AttributeError in notifier loop: \n{} ".format(ae))
             except KeyboardInterrupt:
-                logger.warn("Notifier: Got a keyboard interrupt, exiting")
+                logger.warning("Notifier: Got a keyboard interrupt, exiting")
                 break
 
         logger.warning("****************************************************")
-        logger.warn("Notifier: Returning")
+        logger.warning("Notifier: Returning")
         logger.warning("****************************************************")
         return
 
     def handle_notification(self, message):
+        cameraconfig = message.msgdata['cameraconfig']
+        cameraname = cameraconfig['name']
+        notify_verbally = cameraconfig['notifications']['local_audio_notification']
+        notify_email = cameraconfig['notifications']['email_notification']
+        retain_clips  =  cameraconfig['notifications']['retain_clips']
+
+        logger.debug(f"Notifier: Received a notification for camera: ***{cameraname}***")
+
+        if notify_verbally is False and notify_email is False and retain_clips is False:
+            logger.debug("Notifier: No notifications enabled for this camera")
+            return
 
         if self.detectionfaces is None:
             self.detectionfaces = CamAiDetectionFaces.CamAiDetectionFaces()
@@ -413,8 +422,13 @@ class CamAiNotification (object):
         fps = int(24/9) # TODO: Fix hardcoded sampling of 9
         images = message.msgdata['image']
         matchesarray = message.msgdata['objects detected']
-        cameraname = message.msgdata['cameraname']
+        cameraconfig = message.msgdata['cameraconfig']
         timestamp = message.msgdata['timestamp']
+        cameraname = cameraconfig['name']
+
+        notify_verbally = cameraconfig['notifications']['local_audio_notification']
+        notify_email = cameraconfig['notifications']['email_notification']
+        retain_clips  =  cameraconfig['notifications']['retain_clips']
 
         logger.debug("Notifier: len matchesarray is: {}".format(len(matchesarray)))
         # TODO: Need to do one pass face checking instead of one per image
@@ -454,35 +468,48 @@ class CamAiNotification (object):
                         bestimage = image
         #logger.warning("Found these people: {}".format(faces_found))
 
-        alarm_image_file = os.path.join(self.basedir, message.msgdata['cameraname'] + "_alarm_" + str(message.msgdata['timestamp']) + ".png")
+        alarm_image_file = os.path.join(self.basedir, cameraname + "_alarm_" + str(message.msgdata['timestamp']) + ".png")
 
         # Max compression to optimize for emailability
         # TODO: Might want to make the image size configurable
         compression_params = [cv.IMWRITE_PNG_COMPRESSION, 9]
         rc = cv.imwrite(alarm_image_file, bestimage, compression_params)
 
-        alarm_video_file = os.path.join(self.basedir, message.msgdata['cameraname']+ "_alarm_"+ str(message.msgdata['timestamp'])+ ".mp4")
+        alarm_video_file = os.path.join(self.basedir, cameraname + "_alarm_"+ str(message.msgdata['timestamp'])+ ".mp4")
         CamAiCameraWriter.write_images_to_video(images, alarm_video_file, fps=fps)
 
         alert_text = create_person_alert_text(cameraname, timestamp, num_people_detected, faces_found, max_num_unmatched_faces)
 
         # Verbal notification in the background
-        proc = notifyVerbally(cameraname, alert_text, basedir="./",)
+        if notify_verbally is True:
+            proc = notifyVerbally(cameraname, alert_text, basedir="./",)
+        else:
+            logger.debug(f"Notifier: local audio notifications are disabled for ***{cameraname}***")
 
         # TODO: Make it user configurable to send just the email with image or just video or both
         # Email notification with image
-        file_attachments = [alarm_image_file, alarm_video_file]
-        notifyEmail(cameraname, self.email_sender, self.email_recepients, alert_text, file_attachments)
+        if notify_email is True:
+            file_attachments = [alarm_image_file, alarm_video_file]
+            notifyEmail(cameraname, self.email_sender, self.email_recepients, alert_text, file_attachments)
+        else:
+            logger.debug(f"Notifier: email notifications are disabled for ***{cameraname}***")
 
-        if proc.poll() is None:
-            logger.warning("Notifier: Verbal notification still running at return time ")
+        if notify_verbally is True:
+            if proc.poll() is None:
+                logger.warning("Notifier: Verbal notification still running at return time ")
+
+        if retain_clips is False:
+            logger.debug(f"Notifier: Deleting attachment clips {alarm_image_file}, {alarm_video_file}")
+            os.remove( alarm_image_file)
+            os.remove( alarm_video_file)
 
     def handle_vehicle_notification(self, message):
         fps = int(24/9) # TODO: Fix hardcoded sampling of 9
         images = message.msgdata['image']
         matchesarray = message.msgdata['objects detected']
-        cameraname = message.msgdata['cameraname']
+        cameraconfig = message.msgdata['cameraconfig']
         timestamp = message.msgdata['timestamp']
+        cameraname = cameraconfig['name']
 
         bestimage = images[0]
         logger.debug("Notifier: len matchesarray is: {}".format(len(matchesarray)))
@@ -494,29 +521,41 @@ class CamAiNotification (object):
         #num_vehicles_detected = get_object_count(matchesarray, CamAiDetection.Car_Index)
         num_vehicles_detected = get_object_count(matchesarray, Car_Index)
 
-        alarm_image_file = os.path.join(self.basedir, message.msgdata['cameraname'] + "_alarm_" + str(message.msgdata['timestamp']) + ".png")
+        alarm_image_file = os.path.join(self.basedir, cameraname + "_alarm_" + str(message.msgdata['timestamp']) + ".png")
 
         # Max compression to optimize for emailability
         # TODO: Might want to make the image size configurable
         compression_params = [cv.IMWRITE_PNG_COMPRESSION, 9]
         rc = cv.imwrite(alarm_image_file, bestimage, compression_params)
 
-        alarm_video_file = os.path.join(self.basedir, message.msgdata['cameraname']+ "_alarm_"+ str(message.msgdata['timestamp'])+ ".mp4")
+        alarm_video_file = os.path.join(self.basedir, cameraname + "_alarm_"+ str(message.msgdata['timestamp'])+ ".mp4")
         CamAiCameraWriter.write_images_to_video(images, alarm_video_file, fps=fps)
 
         alert_text = create_vehicle_alert_text(cameraname, timestamp, num_vehicles_detected)
 
         # Verbal notification
-        proc = notifyVerbally(cameraname, alert_text, basedir="./",)
+        if notify_verbally is True:
+            proc = notifyVerbally(cameraname, alert_text, basedir="./",)
+        else:
+            logger.debug(f"Notifier: local audio notifications are disabled for ***{cameraname}***")
+
 
         # TODO: Make it user configurable to send just the email with image or just video or both
         # Email notification with image
-        file_attachments = [alarm_image_file, alarm_video_file]
-        notifyEmail(cameraname, self.email_sender, self.email_recepients, alert_text, file_attachments)
+        if notify_email is True:
+            file_attachments = [alarm_image_file, alarm_video_file]
+            notifyEmail(cameraname, self.email_sender, self.email_recepients, alert_text, file_attachments)
+        else:
+            logger.debug(f"Notifier: email notifications are disabled for ***{cameraname}***")
 
-        if proc.poll() is None:
-            logger.warning("Notifier: Verbal notification still running at return time ")
+        if notify_verbally is True:
+            if proc.poll() is None:
+                logger.warning("Notifier: Verbal notification still running at return time ")
 
+        if retain_clips is False:
+            logger.debug(f"Notifier: Deleting attachment clips {alarm_image_file}, {alarm_video_file}")
+            os.remove( alarm_image_file)
+            os.remove( alarm_video_file)
 
 # MatchesArray = [matches_dicts, ....}
 # matches_dict =

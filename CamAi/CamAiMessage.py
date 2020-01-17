@@ -5,6 +5,7 @@ import threading
 
 class CamAiMsgType(Enum):
     notification = 100
+    configuration = 120
     image = 200
     imagelist = 300
     detectimage = 400
@@ -34,15 +35,31 @@ class CamAiMsg (object):
 
 # Data classes would be nice, but only in 3.7 and above
 class CamAiNotifyMsg(CamAiMsg):
-    def __init__(self, image, objectsdetected, timestamp, cameraname):
+    def __init__(self, image, objectsdetected, timestamp, cameraconfig):
         msgtype = CamAiMsgType.notification
         msgdata = {'image': image,
                    'objects detected': objectsdetected,  # List of Dicts
                    'timestamp': timestamp,
-                   'cameraname': cameraname
+                   'cameraconfig': cameraconfig
                    }
         super().__init__(msgtype, msgdata)
 
+# class CamAiConfigMsgType(Enum):
+#     update = 100
+#     pause_emails = 120
+#     pause_verbal = 121
+#     pause_sms = 122
+#     restart = 900
+#
+# # configmsg is managed separately
+# class CamAiConfigurationMsg(CamAiMsg):
+#     def __init__(self, cameraname, configmsg):
+#         msgtype = CamAiMsgType.configuration
+#         msgdata = {
+#                    'configmsgtype': configmsgtype,
+#                    'cameraname': cameraname
+#                    }
+#         super().__init__(msgtype, msgdata)
 
 class CamAiDetectImage(CamAiMsg):
     def __init__(self, camera_handle, image, detection_type='maskrcnn'):
