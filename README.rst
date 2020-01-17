@@ -8,13 +8,13 @@ CamAi tries to take advantange of the 'many cpu cores' and is heavily threaded t
 It is certainly possible to try to 'graft' these features to existing systems. However it would have resulted in a mish mash of languages and technologies (perl/c++/windows only) or only partially open source. CamAI aims to have a more modern, maintainable and extensible code base that is fully be open source, and cross platform (over time) and modern, without having to jettison control and visibility to 'cloud' cameras.
 
 .. image:: docs/Email_Alert_with_Image.png
-   :width: 50
-   :height: 150
+   :width: 72
+   :height: 61
    :alt: Email Alert with Image
 
-.. image:: docs/Email_Alert_with_Video.png
-   :width: 50
-   :height: 150
+.. image:: docs/Email_Alert_with_Image.gif
+   :width: 72
+   :height: 62
    :alt: Email Alert with Video 
 
 
