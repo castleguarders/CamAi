@@ -12,7 +12,7 @@ It is certainly possible to try to 'graft' these features to existing systems. H
    :height: 61
    :alt: Email Alert with Image
 
-.. image:: docs/Email_Alert_with_Image.gif
+.. image:: docs/Email_Alert_with_Video.gif
    :width: 72
    :height: 62
    :alt: Email Alert with Video 
@@ -111,6 +111,8 @@ Below is an example configuration file that the camcli.py --discover option gene
       deleteeventsthreshold = 80  <--- Start deleting videos with events when overall disk usage reaches this percentage
       deleteafterdays = 7         <--- Only delete after this many days
       log_object_timeseries = true <--- Leave at true, used for instance detection and reducing redundant notifications
+      ffmpeg_options = ""         <--- Video decoder / transport to user, defaults to OS s/w
+                                       Example Nvidia H264 H/W decoder + TCP transport: "video_codec;h264_cuvid|rtsp_transport;tcp"
       
       [camera.objects_of_interest.person] <--- Sub section for an object of interest, in this case a 'person' object
       detection_threshold = 0.98          <--- How confident the model should be that this object was detected

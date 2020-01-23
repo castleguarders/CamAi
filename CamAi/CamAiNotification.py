@@ -511,6 +511,11 @@ class CamAiNotification (object):
         timestamp = message.msgdata['timestamp']
         cameraname = cameraconfig['name']
 
+        notify_verbally = cameraconfig['notifications']['local_audio_notification']
+        notify_email = cameraconfig['notifications']['email_notification']
+        retain_clips  =  cameraconfig['notifications']['retain_clips']
+
+
         bestimage = images[0]
         logger.debug("Notifier: len matchesarray is: {}".format(len(matchesarray)))
 

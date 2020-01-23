@@ -58,6 +58,18 @@ Default_Notifications = {'local_audio_notification':  Default_Local_Audio_Notifi
                          'retain_clips': Default_Retain_Clips
                          }
 
+#os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = "video_codec;h264_cuvid|rtsp_transport;tcp"
+#os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = "rtsp_transport;tcp"
+
+
+H264_CUVID_Video_Decoder = 'video_codec;h264_cuvid'
+HEVC_CUVID_Video_Decoder = 'video_codec;hevc_cuvid'
+
+TCP_RTSP_Transport = 'rtsp_transport;tcp'
+
+NV_HEVC_TCP_RTSP_Transport = HEVC_CUVID_Video_Decoder + '|' + TCP_RTSP_Transport
+
+Default_FFMPEG_Options = ""
 
 CAMVARS = {'name': 'Camera Name',
            'url': '0',
@@ -79,6 +91,7 @@ CAMVARS = {'name': 'Camera Name',
            'deleteeventsthreshold':80,
            'deleteafterdays':7,
            'log_object_timeseries':True,
+           'ffmpeg_options': Default_FFMPEG_Options,
            'notifications': Default_Notifications,
            'objects_of_interest': Default_Objects_to_Watch
            }

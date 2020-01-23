@@ -81,6 +81,25 @@ class CamAiCameraReader(object):
         self.reader.join(waittime)
         logger.warn(f"{cname} : Joining")
 
+    def set_video_codec(self):
+        cname = "Reader: " + self.config.name
+        # @todo Trying to control codec through env var while using multiple threads
+        # can result in a race condition, use multiprocessing observers
+        # instead to guarantee this instead
+        if self.config.ffmpeg_options != "":
+            os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = self.config.ffmpeg_options
+            logger.debug(f"{cname}: Set ffmpeg options to {self.config.ffmpeg_options}")
+        else:
+            logger.debug(f"{cname} No ffmpeg options set, deleting env variable")
+            try:
+                del os.debug['OPENCV_FFMPEG_CAPTURE_OPTIONS']
+            except KeyError:
+                pass
+        try:
+            logger.warning(f"{cname}: Using codec {os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS']}")
+        except BaseException:
+            logger.warning(f"{cname}: No codec option set, using OS default")
+
     # @profile
     def _read_camera(self):
 
@@ -97,21 +116,19 @@ class CamAiCameraReader(object):
         logger.debug(f"{name}: Reader is starting")
 
         # Set the reader process to high priority to reduce frame processing latency,
-        # we lose frames under load otherwise hopefully this will reduce the
-        # lossage
         from .CamAiUtils import increase_my_priority
         increase_my_priority(20)
-        #CamAiUtils.increase_my_priority(20)
 
         priming_success = False
         reader = threading.currentThread()
+
 
         # Wait a bit for the other workers to be ready to handle the work,
         # otherwise we might hang at decoding, or lose image mb's or slices
         time.sleep(Camera_Startup_Wait)
         Burner_Frames = 100
         for connect_attempt in range(priming_reconnect_attempts):
-
+            self.set_video_codec()
             video_capture = cv.VideoCapture(camera_source)
             video_capture.set(cv.CAP_PROP_BUFFERSIZE, self.config.readbuffer)
 
@@ -161,6 +178,7 @@ class CamAiCameraReader(object):
                 video_capture.release()
                 time.sleep(priming_connect_wait)
                 logger.warn(f"{name}: Reconnecting to camera, before retrying, connect attempt: {connect_attempt} ")
+                self.set_video_codec()
                 video_capture = cv.VideoCapture(camera_source)
                 video_capture.set(cv.CAP_PROP_BUFFERSIZE, self.config.readbuffer)
                 if (video_capture.isOpened() == False):
@@ -248,6 +266,7 @@ class CamAiCameraReader(object):
                         logger.warn(f"{name}: Video capture on seems to have hung, reconnecting")
                         video_capture.release()
                         time.sleep(priming_connect_wait)
+                        self.set_video_codec()
                         video_capture = cv.VideoCapture(camera_source)
                         video_capture.set(cv.CAP_PROP_BUFFERSIZE, self.config.readbuffer)
                     else:

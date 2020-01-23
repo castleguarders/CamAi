@@ -440,7 +440,7 @@ def configwizard(config_file):
                                 camera['name'] = cameraname
                                 rotationconfirm= input (f"Do you want the camera image to be rotated: y/n: ")
                                 if rotationconfirm in yesList:
-                                    rotationangle = int(input (f"Please enter the angle (0-360) want to rotate the image by: y/n: "))
+                                    rotationangle = int(input (f"Please enter the angle (0-360) want to rotate the image by: "))
                                     print (f"You entered {rotationangle}")
                                     camera['rotation'] = rotationangle
                             else:

@@ -31,19 +31,6 @@ def monitor() :
     from CamAi import CamAiManager
 
     #print("Hello world")
-    #os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = "video_codec;h264_cuvid"
-    #os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = "video_codec;hevc_cuvid"
-    #os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = "video_codec;h264"
-    #os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = "rtsp_transport;tcp"
-    #os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = "video_codec;hevc_cuvid|rtsp_transport;tcp"
-    #os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = "video_codec;h264_cuvid|rtsp_transport;tcp"
-    #os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = "video_codec;hevc"
-    #os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = "video_codec;hevc|rtsp_transport;tcp"
-    #os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = "rtsp_transport;tcp"
-    try:
-        print("What codec am I using", os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'])
-    except BaseException:
-        print("No codec option set, using OS default")
 
     CamAiManager.start_cameras(config_file)
 
