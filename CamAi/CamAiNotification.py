@@ -386,7 +386,9 @@ class CamAiNotification (object):
             return
 
         if self.detectionfaces is None:
-            self.detectionfaces = CamAiDetectionFaces.CamAiDetectionFaces()
+            knownfacesdir = os.path.join(self.basedir, "known/people")
+            self.detectionfaces = CamAiDetectionFaces.CamAiDetectionFaces(knownfacesdir=knownfacesdir)
+
 
         # microseconds are too noisy to keep around for  notifications
         message.msgdata['timestamp'] = message.msgdata['timestamp'] - \

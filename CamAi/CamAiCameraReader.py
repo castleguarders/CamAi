@@ -92,7 +92,7 @@ class CamAiCameraReader(object):
         else:
             logger.debug(f"{cname} No ffmpeg options set, deleting env variable")
             try:
-                del os.debug['OPENCV_FFMPEG_CAPTURE_OPTIONS']
+                del os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS']
             except KeyError:
                 pass
         try:
@@ -121,7 +121,6 @@ class CamAiCameraReader(object):
 
         priming_success = False
         reader = threading.currentThread()
-
 
         # Wait a bit for the other workers to be ready to handle the work,
         # otherwise we might hang at decoding, or lose image mb's or slices
