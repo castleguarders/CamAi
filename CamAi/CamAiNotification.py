@@ -9,7 +9,7 @@ import datetime
 import time
 import cv2 as cv
 
-from . import CamAiMessage, CamAiDetectionFaces, CamAiCameraWriter
+from . import CamAiMessage, CamAiCameraWriter
 from .CamAiDetection import get_class_index, get_class_name, Person_Index, Car_Index, Bicycle_Index, Motorcycle_Index, Truck_Index, Bus_Index, Vehicle_Indexes
 
 logger = logging.getLogger(__name__)
@@ -275,7 +275,6 @@ class CamAiNotification (object):
         self.config = config
         self.notification_queues = notification_queues
         self.start_time = time.time()
-        #self.detectionfaces = CamAiDetectionFaces.CamAiDetectionFaces()
         logger.debug("Notifier: Monitoring {} queues".format(len(notification_queues)))
 
 
@@ -387,6 +386,7 @@ class CamAiNotification (object):
 
         if self.detectionfaces is None:
             knownfacesdir = os.path.join(self.basedir, "known/people")
+            from . import CamAiDetectionFaces
             self.detectionfaces = CamAiDetectionFaces.CamAiDetectionFaces(knownfacesdir=knownfacesdir)
 
 

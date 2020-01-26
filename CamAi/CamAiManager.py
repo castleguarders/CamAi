@@ -131,6 +131,7 @@ class CamAi(object):
 
 
 def start_cameras(config_file):
+    name = "Camera Manager: "
     camera_names = []
     camera_detect_queues = []
     camera_response_queues = []
@@ -161,6 +162,7 @@ def start_cameras(config_file):
     from .CamAiUtils import increase_my_priority
     increase_my_priority(5)
 
+    detector_needed = False
     camera_index = 0
     cameraconfigs = self.config.get_cameras()
     for cameraconfig in cameraconfigs:
@@ -176,16 +178,23 @@ def start_cameras(config_file):
 
         camera_queues = self.create_camera_queues(cameraconfig)
 
-        # TODO, not all queues are initialized till the end of this loop
-        # AiCameras need detection config for image resize pipelining
-        # Need a cleaner way to do this and get rid of the catch-22 dependency
-        from .CamAiDetection import CamAiDetection
-        detection = CamAiDetection(
-            name=cameraname, detect_queues=camera_detect_queues,
-            response_queues=camera_response_queues,
-            pipeline_image_resize=manager_options['pipelineresize'],
-            singledetectorqueue=manager_options['singledetectorqueue'],
-            multiprocessing=manager_options['multiprocessing_detector'])
+        from .CamAiConfig import CamAiCameraMode
+        if cameraconfig['mode'] !=  CamAiCameraMode.record_only.name:
+            detector_needed = True
+
+            # TODO, not all queues are initialized till the end of this loop
+            # AiCameras need detection config for image resize pipelining
+            # Need a cleaner way to do this and get rid of the catch-22 dependency
+            from .CamAiDetection import CamAiDetection
+            detection = CamAiDetection(
+                name=cameraname, detect_queues=camera_detect_queues,
+                response_queues=camera_response_queues,
+                pipeline_image_resize=manager_options['pipelineresize'],
+                singledetectorqueue=manager_options['singledetectorqueue'],
+                multiprocessing=manager_options['multiprocessing_detector'])
+        else:
+            logger.warning(f"{name}:  {cameraname} is in record only mode, no detection object needed")
+            detection=None
 
         from .CamAiCamera import CamAiCamera
         aicamera = CamAiCamera.from_dict(
@@ -207,7 +216,6 @@ def start_cameras(config_file):
         logger.warning("{}: Start camera".format(cameraname))
         aicamera.start()
 
-    name = "Camera Manager: "
 
     # Start the notification process/thread, face detection needs another
     # tensorflow instance, so a process is required for now,
@@ -223,42 +231,45 @@ def start_cameras(config_file):
     #notification = CamAiNotification.CamAiNotification(self.config, camera_notification_queues)
     notification.start()
 
-    # This stuff should move to CamAiDetection class's start method
-    detectors = []
-    if manager_options['multiprocessing_detector'] is False:
-        num_detectors = manager_options['numdetectors']
-    else:
-        num_detectors = 1
-
-    # for num in range(Number_Of_Detectors):
-    # TODO: Yikes, we are using threads directly instead of detector classes
-    # Need to finish this last bit of conversion to classes
-    from .CamAiDetection import object_detector_server
-    for num in range(num_detectors):
-        if (manager_options['multiprocessing_detector'] is False):
-            detector = threading.Thread(
-                target=object_detector_server,
-                # detector =
-                # ProfiledThread(target=object_detector_server,
-                # \
-                args=(detection, camera_names),
-                name=("detector" + "_" + str(num)))
-            detector.do_detect = True
-            detectors.append(detector)
-            logger.warning("{}: Starting detector thread number {}".format(name, num))
-            detector.start()
-
+    if detector_needed is True:
+        # This stuff should move to CamAiDetection class's start method
+        detectors = []
+        if manager_options['multiprocessing_detector'] is False:
+            num_detectors = manager_options['numdetectors']
         else:
-            detector = Process(
-                target=object_detector_server,
-                # detector =
-                # ProfiledProcess(target=object_detector_server,
-                # \
-                args=(detection, camera_names),
-                name=("detector" + "_" + str(num)))
-            detectors.append(detector)
-            logger.warning("{}: Starting detector process number {}".format(name, num))
-            detector.start()
+            num_detectors = 1
+
+        # for num in range(Number_Of_Detectors):
+        # TODO: We are using threads directly instead of detector classes
+        # Need to finish this last bit of conversion to classes
+        from .CamAiDetection import object_detector_server
+        for num in range(num_detectors):
+            if (manager_options['multiprocessing_detector'] is False):
+                detector = threading.Thread(
+                    target=object_detector_server,
+                    # detector =
+                    # ProfiledThread(target=object_detector_server,
+                    # \
+                    args=(detection, camera_names),
+                    name=("detector" + "_" + str(num)))
+                detector.do_detect = True
+                detectors.append(detector)
+                logger.warning("{}: Starting detector thread number {}".format(name, num))
+                detector.start()
+
+            else:
+                detector = Process(
+                    target=object_detector_server,
+                    # detector =
+                    # ProfiledProcess(target=object_detector_server,
+                    # \
+                    args=(detection, camera_names),
+                    name=("detector" + "_" + str(num)))
+                detectors.append(detector)
+                logger.warning("{}: Starting detector process number {}".format(name, num))
+                detector.start()
+    else:
+        logger.warning(f"{name}:  All cameras in record only mode, will not launch detector instances")
 
     logger.debug("{}: Installing Signal Handlers".format(name))
     install_sighandler()
@@ -328,10 +339,13 @@ def start_cameras(config_file):
         aicamera.stop()
         aicamera.join(10)
 
-    for detector in detectors:
-        detector.do_detect = False # TODO: get rid of this when fully moved to detection class usage
-        #detector.stop()
-        detector.join(10)
+    if detector_needed is True:
+        for detector in detectors:
+            detector.do_detect = False # TODO: get rid of this when fully moved to detection class usage
+            #detector.stop()
+            detector.join(10)
+    else:
+        logger.warning(f"{name}:  All cameras in record only mode, no detector instances to stop")
 
     # Notifier, observers should already have asked corresponding notifiers
     # via respective notification_queues
