@@ -40,7 +40,7 @@ logger.addHandler(stream_handler)
 DEBUG = False
 
 Q_Depth_Profiler_Interval = 300
-Alarm_Cache_Size = 180 # Batch size used when events are detected
+Alarm_Cache_Size = 60 # Batch size used when events are detected
 
 class CamAiCamera (object):
 
@@ -453,6 +453,8 @@ class CamAiCamera (object):
                     self.mode == CamAiCameraMode.detect_and_record_everything.name or
                     self.mode == CamAiCameraMode.detect_only.name):
 
+                    alarm_cache = []
+
                     images, should_quit = self.get_images_from_camera(1)
                     if should_quit is True:
                         do_observe = False
@@ -552,28 +554,43 @@ class CamAiCamera (object):
                             message = CamAiMessage.CamAiImage(frame)
                             writer_queue.put(message)
 
-                        skipped_frames_cache, should_quit = self.get_images_from_camera(self.detectionrate)
-                        if should_quit is True:
-                            do_observe = False
-                            break
-
                         if self.mode == CamAiCameraMode.detect_and_record_everything.name:
-                            batchmessage = CamAiMessage.CamAiImageList(skipped_frames_cache)
-                            writer_queue.put(batchmessage)
+                            # Handling one frame at a time to minimize memory
+                            for image_num in range(self.detectionrate):
+                                skipped_frame, should_quit = self.get_images_from_camera(1)
+                                if should_quit is True:
+                                    do_observe = False
+                                    break
+
+                            batchmessage = CamAiMessage.CamAiImageList(skipped_frame)
+                            try:
+                                writer_queue.put(batchmessage)
+                            except queue.Full:
+                                logger.error(f"{name}: Could not send skipped frame cache")
+                            # No need to keep using this memory in this mode
+                            del skipped_frame
+                            skipped_frames_cache = []
+                        # No choice but to batch all frames till next detect
+                        elif self.mode == CamAiCameraMode.detect_and_record_timelapse.name:
+                            skipped_frames_cache, should_quit = self.get_images_from_camera(self.detectionrate)
+                            if should_quit is True:
+                                do_observe = False
+                                break
+
 
                     # Alarm is True
                     else:
-                        logger.warning(f"{name}: Logging alarm frames on camera")
+                        logger.error(f"{name}: Logging alarm frames on camera")
 
-                        if self.mode != CamAiCameraMode.detect_only.name:
-                            # This catches the case if the first frame itself is alarming
+                        #if self.mode != CamAiCameraMode.detect_only.name:
+                        # This catches the case if the first frame itself is alarming
+                        if self.mode == CamAiCameraMode.detect_and_record_timelapse.name:
                             if len(skipped_frames_cache) > 0:
                                 batchmessage = CamAiMessage.CamAiImageList(skipped_frames_cache)
                                 try:
                                     writer_queue.put(batchmessage)
                                 except queue.Full:
-                                    logger.warning(f"{name}: Could not send skipped frame cache")
-                                    pass
+                                    logger.error(f"{name}: Could not send skipped frame cache")
 
                         # Now send the current frame to writer
                         if self.mode != CamAiCameraMode.detect_only.name:
@@ -581,8 +598,9 @@ class CamAiCamera (object):
                                 message = CamAiMessage.CamAiImage(frame)
                                 writer_queue.put(message)
                             except queue.Full:
-                                logger.warning(f"{name}: Could not send frame to writer")
+                                logger.error(f"{name}: Could not send frame to writer")
 
+                        del skipped_frames_cache
                         skipped_frames_cache = []
 
                         # Don't wait, get the next set of tracked frames as an object we are interested in
@@ -600,8 +618,12 @@ class CamAiCamera (object):
 
                             if self.mode != CamAiCameraMode.detect_only.name:
                                 logger.debug(f"{name}: Batched {Alarm_Cache_Size} alarm frames to writer")
-                                batchmessage = CamAiMessage.CamAiImageList(alarm_cache)
-                                writer_queue.put(batchmessage)
+                                try:
+                                    batchmessage = CamAiMessage.CamAiImageList(alarm_cache)
+                                    writer_queue.put(batchmessage)
+                                except queue.Full:
+                                    logger.error(f"{name}: Could not send alarm cache to writer")
+
 
                             # Send to notifications queue also, it will
                             # try to find a frame with the 'best' face

@@ -6,7 +6,8 @@ from subprocess import DEVNULL
 # Required for WS-Discovery (Multicast / UDP based)
 import re
 import sys
-from wsdiscovery.daemon import WSDiscovery
+from wsdiscovery.discovery import ThreadedWSDiscovery as WSDiscovery
+#from wsdiscovery.daemon import WSDiscovery
 from wsdiscovery.scope import Scope
 from wsdiscovery.qname import QName
 from urllib.parse import urlparse
@@ -377,7 +378,7 @@ def configwizard(config_file):
 
     try:
         max_retries = 3
-        max_frames_to_buffer = 16
+        max_frames_to_buffer = 1
         tomldict = {}
         cameras = discover_cameras()
         yesList = ['y', 'Y', 'Yes', 'YES', 'YEs', 'yes', 'yES', 'yEs', 'YE', 'Ye', 'ye', 'yE']
@@ -438,6 +439,9 @@ def configwizard(config_file):
                                 proc.kill()
                                 cameraname = input(f"Enter to accept '{camera['name']}' as camera name, or type in another name and Enter: ") or camera['name']
                                 camera['name'] = cameraname
+                                #camera['mode'] = CamAiConfig.CamAiCameraMode.detect_and_record_everything.name,
+                                camera_mode = input(f"Enter to accept '{CamAiConfig.CamAiCameraMode.record_only.name}' as operating mode, or enter one of detect_and_record_everything, detect_only,  record_only : ") or CamAiConfig.CamAiCameraMode.record_only.name
+                                camera['mode'] = camera_mode
                                 rotationconfirm= input (f"Do you want the camera image to be rotated: y/n: ")
                                 if rotationconfirm in yesList:
                                     rotationangle = int(input (f"Please enter the angle (0-360) want to rotate the image by: "))

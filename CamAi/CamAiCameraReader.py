@@ -11,13 +11,9 @@ import logging
 import imutils
 
 from . import CamAiMessage
-#import CamAiMessage
-#import CamAiDetection
-#import CamAiUtils
-#from CamAiConfig import CamAiCameraMode
 
 logger = logging.getLogger(__name__)
-#logger.setLevel(logging.WARN)
+#logger.setLevel(logging.WARNING)
 #formatter = logging.Formatter('%(asctime)s:%(name)s:%(message)s')
 formatter = logging.Formatter('%(asctime)s:%(name)s:%(funcName)s:%(lineno)d:%(levelname)s:%(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 #formatter = logging.Formatter('%(asctime)s:%(message)s')
@@ -30,6 +26,7 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 #stream_handler.setLevel(logging.DEBUG)
 stream_handler.setLevel(logging.ERROR)
+#stream_handler.setLevel(logging.WARNING)
 
 #logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
@@ -47,6 +44,7 @@ priming_read_wait = 1
 Skip_Detection = False
 # Only used when Detection is being skipped
 Enable_Disk_Recording_During_Skip = True
+Record_Batch_Size = 1 # Batch size used in recording only mode
 
 class CamAiCameraReader(object):
 
@@ -67,19 +65,19 @@ class CamAiCameraReader(object):
                 target=self._read_camera, args=([]), name=cname)
             self.reader.do_read= True
 
-        logger.warn(f"{cname} : Starting")
+        logger.warning(f"{cname} : Starting")
         self.reader.start()
 
     def stop(self):
         cname = "Reader: " + self.config.name
         if self.config.multiprocessing_reader is False:
             self.reader.do_read = False
-        logger.warn(f"{cname} : Stopping")
+        logger.error(f"{cname} : Stopping")
 
-    def join(self, waittime=10):
+    def join(self, waittime=30):
         cname = "Reader: " + self.config.name
         self.reader.join(waittime)
-        logger.warn(f"{cname} : Joining")
+        logger.warning(f"{cname} : Joining")
 
     def set_video_codec(self):
         cname = "Reader: " + self.config.name
@@ -126,6 +124,7 @@ class CamAiCameraReader(object):
         # otherwise we might hang at decoding, or lose image mb's or slices
         time.sleep(Camera_Startup_Wait)
         Burner_Frames = 100
+        Queue_Put_Timeout = 0
         for connect_attempt in range(priming_reconnect_attempts):
             self.set_video_codec()
             video_capture = cv.VideoCapture(camera_source)
@@ -154,20 +153,20 @@ class CamAiCameraReader(object):
                                 if np.any(frame):
                                     break
                                 else:
-                                    logger.warn(f"{name} No ndarray yet, frame type is : {type(frame)}")
+                                    logger.warning(f"{name} No ndarray yet, frame type is : {type(frame)}")
                     else:
-                        logger.warn(f"{name}: Failed getting a priming frame, will retry in {priming_read_wait} seconds, read attempt {read_attempt} ")
+                        logger.warning(f"{name}: Failed getting a priming frame, will retry in {priming_read_wait} seconds, read attempt {read_attempt} ")
                         time.sleep(priming_read_wait)
                     # Frame is none in this case
                 except AttributeError:
-                    logger.warn(f"{name}: Read from source came back with a null")
+                    logger.warning(f"{name}: Read from source came back with a null")
                     time.sleep(priming_read_wait)
 
                 # Check if parent requests us to stop, need to check for consistent exit handling later
                 # TODO Make this MultiProcess aware
                 # TODO: In progress exit notifications only through queues
                 # if (reader.do_read == False):
-                #    logger.warn("Stopping thread {}".format(reader.name))
+                #    logger.warning("Stopping thread {}".format(reader.name))
                 #    video_capture.release()
                 #    return
 
@@ -176,7 +175,7 @@ class CamAiCameraReader(object):
             else:
                 video_capture.release()
                 time.sleep(priming_connect_wait)
-                logger.warn(f"{name}: Reconnecting to camera, before retrying, connect attempt: {connect_attempt} ")
+                logger.warning(f"{name}: Reconnecting to camera, before retrying, connect attempt: {connect_attempt} ")
                 self.set_video_codec()
                 video_capture = cv.VideoCapture(camera_source)
                 video_capture.set(cv.CAP_PROP_BUFFERSIZE, self.config.readbuffer)
@@ -184,7 +183,7 @@ class CamAiCameraReader(object):
                     logger.error(f"{name}: Video Capture is not in opened state ")
 
         if priming_success is False:
-            logger.warn(f"{name}: Failed to prime camera, ending thread")
+            logger.warning(f"{name}: Failed to prime camera, ending thread")
             video_capture.release()
             return
 
@@ -197,7 +196,8 @@ class CamAiCameraReader(object):
 
         direct_write_cache = []
         direct_bufcount = 0
-        Record_Batch_Size = 10 # Batch size used in recording only mode
+        read_failure_count = 0
+        read_success_count = 0
 
         from .CamAiConfig import CamAiCameraMode
 
@@ -206,6 +206,9 @@ class CamAiCameraReader(object):
                 # TODO: In progress exit notifications only through queues, only
                 # reader still depends on do_ variable to exit
                 do_read = reader.do_read
+                if do_read is False:
+                    logger.error(f"{name}: do_reader is set to False")
+                    break
 
             try:
                 rdstart = time.perf_counter()
@@ -214,11 +217,12 @@ class CamAiCameraReader(object):
                     # This is happening even after priming when reading video
                     # files
                     if np.any(frame) is False:
-                        logger.warn(f"{name}: np.any() returns False for frame of type {type(frame)}")
+                        logger.warning(f"{name}: np.any() returns False for frame of type {type(frame)}")
                         next
 
                     num_frames_read += 1
                     last_frame_read_time = time.time()
+                    read_success_count  += 1
 
                     # Send directly to writer if detection is not enabled
                     if (self.config.mode == CamAiCameraMode.record_only.name):
@@ -230,10 +234,10 @@ class CamAiCameraReader(object):
                         if direct_bufcount >= Record_Batch_Size:
                             message = CamAiMessage.CamAiImageList(direct_write_cache)
                             try:
-                                writer_queue.put(message)
                                 # logger.debug("{}: Added to writer queue".format(name))
+                                writer_queue.put(message)
                             except queue.Full:
-                                logger.warn(f"{name}: Writer queue is full")
+                                logger.warning(f"{name}: Writer queue is full")
                                 continue
                             # Can't clear the old one as it's in the queue, get a new one
                             # Old one should be auto deref'd after writer processes it
@@ -243,10 +247,10 @@ class CamAiCameraReader(object):
                     else:
                         try:
                             message = CamAiMessage.CamAiImage(frame)
-                            #message = CamAiMessage.CamAiImage(frame)
+                            #reader_queue.put(message, timeout=Queue_Put_Timeout)
                             reader_queue.put(message)
                         except queue.Full:
-                            logger.warn(f"{name}: Reader queue is full")
+                            logger.warning(f"{name}: Reader queue is full")
                             continue
 
                     latency = (time.perf_counter() - rdstart)
@@ -256,25 +260,26 @@ class CamAiCameraReader(object):
                         max_latency = latency
                     frame_process_time += latency
                 else:
-                    pass
-                    #logger.warn("{}: read failure".format(name))
+                    read_failure_count  += 1
+                    if (read_failure_count%100 == 0):
+                        logger.error("{}: failure count {} of {}".format(name, read_failure_count, read_success_count))
 
                 # Check for hung video captures
                 if (time.time() - last_frame_read_time) > watchdogtimer:
                     if watchdogenable is True:
-                        logger.warn(f"{name}: Video capture on seems to have hung, reconnecting")
+                        logger.warning(f"{name}: Video capture on seems to have hung, reconnecting")
                         video_capture.release()
                         time.sleep(priming_connect_wait)
                         self.set_video_codec()
                         video_capture = cv.VideoCapture(camera_source)
                         video_capture.set(cv.CAP_PROP_BUFFERSIZE, self.config.readbuffer)
                     else:
-                        logger.warn(f"{name}: Video capture on seems to have hung, and watchdog is disabled, exiting reader")
+                        logger.warning(f"{name}: Video capture on seems to have hung, and watchdog is disabled, exiting reader")
                         break
 
             # This shouldn't be necessary unless we put this in a different process
             except KeyboardInterrupt:
-                logger.warn(f"{name}: Got a keyboard interrupt, is exiting")
+                logger.warning(f"{name}: Got a keyboard interrupt, is exiting")
                 break
 
         # In case observer is waiting on us when record_only is enabled
@@ -287,29 +292,31 @@ class CamAiCameraReader(object):
         #    "{}: Sent quit message via reader queue to observer or writer before exiting ".format(name))
 
         if video_capture is not None:
+            logger.error(f"{name}: Releasing video_capture")
             video_capture.release()
+            logger.error(f"{name}: Released video_capture")
         if self.config.multiprocessing_reader is True:
             reader_queue.close()
 
         if DEBUG is True:
             self.dump_stats(name, num_frames_read, frame_process_time, max_latency, min_latency)
 
-        logger.warn(f"{name}: Returning from reader {reader.name}")
+        logger.error(f"{name}: Returning from reader {reader.name}")
         return
 
     def dump_stats(self, name, num_frames_read, frame_process_time, max_latency, min_latency):
-        logger.warn(f"{name}: =============================================================================")
-        logger.warn(f"{name}: Camera Reader Statistics")
+        logger.warning(f"{name}: =============================================================================")
+        logger.warning(f"{name}: Camera Reader Statistics")
         if num_frames_read > 0:
-            logger.warn("{}: Average per frame processing latency is {:.2f} ms, frames read: {}" .format(
+            logger.warning("{}: Average per frame processing latency is {:.2f} ms, frames read: {}" .format(
                     name, 1000*(frame_process_time/num_frames_read), num_frames_read))
-        logger.warn(
+        logger.warning(
             "{}: Max per frame processing latency is {:.2f} ms".format(
                 name, 1000*max_latency))
-        logger.warn(
+        logger.warning(
             "{}: Min per frame processing latency is {:.2f} ms".format(
                 name, 1000*min_latency))
-        logger.warn(f"{name}: =============================================================================")
+        logger.warning(f"{name}: =============================================================================")
 
 if __name__ == '__main__':
     pass
